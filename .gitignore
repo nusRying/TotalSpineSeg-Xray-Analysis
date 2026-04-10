@@ -182,3 +182,12 @@ cython_debug/
 *.csv
 *.nii.gz
 *.nii
+
+# Project specific ignores
+data/
+deliverables/
+logs/
+chat_with_client.md
+tmp_mendeley_page.html
+milestone 3.md
+*.pdf

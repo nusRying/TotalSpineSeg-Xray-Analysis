@@ -19,6 +19,7 @@ Please also cite nnU-Net since our work is heavily based on it:
 - [Installation](#installation)
 - [Training](#training)
 - [Inference](#inference)
+- [Experimental X-Ray Baseline](#experimental-x-ray-baseline)
 - [Localizer based labeling](#localizer-based-labeling)
 - [Results](#results)
 - [List of Classes](#list-of-classes)
@@ -208,6 +209,41 @@ Key points:
 - Preview images in JPEG format
 - step1_levels: single voxel in canal centerline at each IVD level, numbered from C1 (1 above C1, 2 above C2, etc.)
 - step2_output: final labeled vertebrae, discs, cord, and canal
+
+## Experimental X-Ray Baseline
+
+This repository now includes an experimental milestone 1 scaffold for adapting the project to 2D AP thoracolumbar X-rays.
+
+Scope of the X-ray baseline:
+
+- public-data target: AASCE / SpineWeb style AP thoracolumbar radiographs with `T1-L5` landmarks
+- model target: vertebrae segmentation baseline
+- training setup: `nnU-Net 2d`
+- label source: vertebra landmark polygons rasterized into masks
+- label-capable path: ordered or named vertebra labels such as `T1-L5` or `C1-L5` when annotations support them
+
+The X-ray scaffold is intentionally narrower than the MRI workflow above.
+It does not imply cervical coverage unless a separate `C1-C7` annotated dataset is added.
+
+Files:
+
+- Design note: [`docs/xray_milestone1_design.md`](docs/xray_milestone1_design.md)
+- Workflow note: [`docs/xray_milestone2_workflow.md`](docs/xray_milestone2_workflow.md)
+- Landmark rasterization: [`scripts/xray_landmarks_to_mask.py`](scripts/xray_landmarks_to_mask.py)
+- Dataset conversion: [`scripts/prepare_xray_dataset.py`](scripts/prepare_xray_dataset.py)
+- Training entrypoints: [`scripts/train_xray.sh`](scripts/train_xray.sh), [`scripts/train_xray.ps1`](scripts/train_xray.ps1)
+- Inference entrypoint: `totalspineseg_xray_inference`
+- Postprocessing entrypoint: `totalspineseg_xray_postprocess`
+- Evaluation entrypoint: `totalspineseg_xray_evaluate`
+
+Examples:
+
+- Rasterize landmark polygons into anatomical labels:
+  `python scripts/xray_landmarks_to_mask.py --mode label --ordered-labels T1-L5 ...`
+- Postprocess a binary model into ordered anatomical labels:
+  `totalspineseg_xray_postprocess raw_preds out --prediction-mode binary --ordered-labels T1-L5`
+- Evaluate a labeled model:
+  `totalspineseg_xray_evaluate preds refs report --evaluation-mode multiclass`
 
 ## Localizer based labeling
 

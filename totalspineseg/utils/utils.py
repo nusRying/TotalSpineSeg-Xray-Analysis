@@ -1,7 +1,17 @@
-from importlib.metadata import metadata
+from importlib.metadata import PackageNotFoundError, metadata
 
-# Weights zip urls
-ZIP_URLS = dict([meta.split(', ') for meta in metadata('totalspineseg').get_all('Project-URL') if meta.startswith('Dataset')])
 
-# Version
-VERSION = metadata('totalspineseg').get('version')
+try:
+    package_metadata = metadata("totalspineseg")
+except PackageNotFoundError:
+    package_metadata = None
+
+
+if package_metadata is None:
+    ZIP_URLS = {}
+    VERSION = "0+local"
+else:
+    ZIP_URLS = dict(
+        [meta.split(", ") for meta in package_metadata.get_all("Project-URL") if meta.startswith("Dataset")]
+    )
+    VERSION = package_metadata.get("version")
