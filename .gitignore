@@ -187,7 +187,22 @@ cython_debug/
 data/
 deliverables/
 logs/
+things from client/
 chat_with_client.md
-tmp_mendeley_page.html
 milestone 3.md
+tmp_mendeley_page.html
 *.pdf
+
+# Secrets and Private Information
+.env
+.env.*
+secrets.json
+credentials.json
+*.pem
+*.key
+
+# Temporary and Backup files
+*.bak
+*.tmp
+*.temp
+~*
