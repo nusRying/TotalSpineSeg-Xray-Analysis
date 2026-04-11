@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import requests
+from tqdm import tqdm
 
 
 CSXA_FILES = {
@@ -116,10 +117,19 @@ def stream_download(url: str, destination: Path, expected_size: int, max_attempt
                     raise RuntimeError("Server did not honor byte-range resume request.")
 
                 mode = "ab" if existing_size > 0 else "wb"
-                with destination.open(mode) as handle:
-                    for chunk in response.iter_content(chunk_size=8 * 1024 * 1024):
+                total_size = int(response.headers.get("content-length", 0))
+                with destination.open(mode) as handle, tqdm(
+                    desc=destination.name,
+                    initial=existing_size,
+                    total=total_size + existing_size,
+                    unit="iB",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                ) as bar:
+                    for chunk in response.iter_content(chunk_size=1 * 1024 * 1024):
                         if chunk:
                             handle.write(chunk)
+                            bar.update(len(chunk))
         except (requests.RequestException, RuntimeError) as exc:
             attempt += 1
             if attempt >= max_attempts:

@@ -44,8 +44,9 @@ $jobs = [int](Get-EnvOrDefault "TOTALSPINESEG_JOBS" "$cores")
 $jobsNn = [Math]::Min($jobs, [Math]::Max([int]($memoryGb / 8), 1))
 $jobsNn = [int](Get-EnvOrDefault "TOTALSPINESEG_JOBSNN" "$jobsNn")
 
+$pythonExecutable = "C:\Users\umair\miniconda3\envs\totalspineseg-xray\python.exe"
 $device = Get-EnvOrDefault "TOTALSPINESEG_DEVICE" (
-    python -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')"
+    & $pythonExecutable -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')"
 )
 
 $env:nnUNet_def_n_proc = "$jobsNn"
@@ -78,19 +79,21 @@ Write-Host "DATASET=$Dataset"
 Write-Host "FOLD=$Fold"
 Write-Host ""
 
+$pythonScriptsDir = "C:\Users\umair\miniconda3\envs\totalspineseg-xray\Scripts"
+
 $fingerprintPath = Join-Path $env:nnUNet_preprocessed "$datasetName\\dataset_fingerprint.json"
 if (-not (Test-Path $fingerprintPath)) {
     Write-Host "Extracting fingerprint for dataset $datasetName"
-    Invoke-CheckedCommand -Command { nnUNetv2_extract_fingerprint -d $Dataset -np $jobsNn --verify_dataset_integrity } -FailureMessage "nnUNet fingerprint extraction failed."
+    Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_extract_fingerprint.exe") -d $Dataset -np $jobsNn --verify_dataset_integrity } -FailureMessage "nnUNet fingerprint extraction failed."
 }
 
 $plansPath = Join-Path $env:nnUNet_preprocessed "$datasetName\\$nnUNetPlans.json"
 if (-not (Test-Path $plansPath)) {
     Write-Host "Planning dataset $datasetName"
     if ($GpuMemoryTargetGb -gt 0) {
-        Invoke-CheckedCommand -Command { nnUNetv2_plan_experiment -d $Dataset -pl $nnUNetPlanner -gpu_memory_target $GpuMemoryTargetGb -overwrite_plans_name $nnUNetPlans } -FailureMessage "nnUNet experiment planning failed."
+        Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_plan_experiment.exe") -d $Dataset -pl $nnUNetPlanner -gpu_memory_target $GpuMemoryTargetGb -overwrite_plans_name $nnUNetPlans } -FailureMessage "nnUNet experiment planning failed."
     } else {
-        Invoke-CheckedCommand -Command { nnUNetv2_plan_experiment -d $Dataset -pl $nnUNetPlanner -overwrite_plans_name $nnUNetPlans } -FailureMessage "nnUNet experiment planning failed."
+        Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_plan_experiment.exe") -d $Dataset -pl $nnUNetPlanner -overwrite_plans_name $nnUNetPlans } -FailureMessage "nnUNet experiment planning failed."
     }
 }
 
@@ -100,8 +103,25 @@ Write-Host "data_identifier=$dataIdentifier"
 
 $preprocessedPath = Join-Path $env:nnUNet_preprocessed "$datasetName\\$dataIdentifier"
 if (-not (Test-Path $preprocessedPath)) {
-    Write-Host "Preprocessing dataset $datasetName"
-    Invoke-CheckedCommand -Command { nnUNetv2_preprocess -d $Dataset -plans_name $nnUNetPlans -c $configuration -np $jobsNn } -FailureMessage "nnUNet preprocessing failed."
+    Write-Host "Preprocessing directory missing. Starting preprocessing..."
+    Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_preprocess.exe") -d $Dataset -plans_name $nnUNetPlans -c $configuration -np $jobsNn } -FailureMessage "nnUNet preprocessing failed."
+}
+
+# --- NEW: Robustness Check ---
+$datasetJson = Get-Content (Join-Path $env:nnUNet_raw "$datasetName\\dataset.json") -Raw | ConvertFrom-Json
+$expectedCount = $datasetJson.numTraining
+$actualCount = (Get-ChildItem $preprocessedPath -Filter "*_seg.b2nd").Count
+
+if ($actualCount -lt $expectedCount) {
+    Write-Host "WARNING: Partial preprocessing detected ($actualCount/$expectedCount). Resuming..."
+    Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_preprocess.exe") -d $Dataset -plans_name $nnUNetPlans -c $configuration -np $jobsNn } -FailureMessage "nnUNet preprocessing resume failed."
+}
+# -----------------------------
+
+$freeSpaceGb = [math]::Round((Get-PSDrive C).Free / 1GB, 2)
+if ($freeSpaceGb -lt 5) {
+    Write-Host "CRITICAL: Only $freeSpaceGb GB free. Training will likely fail due to disk space."
+    # We don't exit, but we warn loudly
 }
 
 if ($StopAfterPreprocess) {
@@ -110,7 +130,7 @@ if ($StopAfterPreprocess) {
 }
 
 Write-Host "Training dataset $datasetName fold $Fold"
-Invoke-CheckedCommand -Command { nnUNetv2_train $Dataset $configuration $Fold -tr $nnUNetTrainer -p $nnUNetPlans --c -device $device } -FailureMessage "nnUNet training failed."
+Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_train.exe") $Dataset $configuration $Fold -tr $nnUNetTrainer -p $nnUNetPlans --c -device $device } -FailureMessage "nnUNet training failed."
 
 $imagesTs = Join-Path $datasetDir.FullName "imagesTs"
 $labelsTs = Join-Path $datasetDir.FullName "labelsTs"
@@ -118,6 +138,6 @@ if ((Test-Path $imagesTs) -and (Test-Path $labelsTs)) {
     Write-Host "Running test-set prediction for dataset $datasetName"
     $testDir = Join-Path $env:nnUNet_results "$datasetName\\${nnUNetTrainer}__${nnUNetPlans}__${configuration}\\fold_${Fold}\\test"
     New-Item -ItemType Directory -Force -Path $testDir | Out-Null
-    Invoke-CheckedCommand -Command { nnUNetv2_predict -d $Dataset -i $imagesTs -o $testDir -f $Fold -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $jobsNn -nps $jobsNn } -FailureMessage "nnUNet test prediction failed."
-    Invoke-CheckedCommand -Command { nnUNetv2_evaluate_folder $labelsTs $testDir -djfile (Join-Path $env:nnUNet_results "$datasetName\\${nnUNetTrainer}__${nnUNetPlans}__${configuration}\\dataset.json") -pfile (Join-Path $env:nnUNet_results "$datasetName\\${nnUNetTrainer}__${nnUNetPlans}__${configuration}\\plans.json") -np $jobsNn } -FailureMessage "nnUNet test evaluation failed."
+    Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_predict.exe") -d $Dataset -i $imagesTs -o $testDir -f $Fold -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $jobsNn -nps $jobsNn } -FailureMessage "nnUNet test prediction failed."
+    Invoke-CheckedCommand -Command { & (Join-Path $pythonScriptsDir "nnUNetv2_evaluate_folder.exe") $labelsTs $testDir -djfile (Join-Path $env:nnUNet_results "$datasetName\\${nnUNetTrainer}__${nnUNetPlans}__${configuration}\\dataset.json") -pfile (Join-Path $env:nnUNet_results "$datasetName\\${nnUNetTrainer}__${nnUNetPlans}__${configuration}\\plans.json") -np $jobsNn } -FailureMessage "nnUNet test evaluation failed."
 }

@@ -2,11 +2,12 @@ import json
 from pathlib import Path
 
 import numpy as np
+import nibabel as nib
 from PIL import Image
 
 
-SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".jpg", ".jpeg"}
-SUPPORTED_LABEL_SUFFIXES = {".png", ".bmp", ".tif", ".tiff"}
+SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".jpg", ".jpeg", ".nii.gz"}
+SUPPORTED_LABEL_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".nii.gz"}
 OVERLAY_COLORS = np.asarray(
     [
         [230, 57, 70],
@@ -26,6 +27,8 @@ OVERLAY_COLORS = np.asarray(
 
 def case_id_from_path(path: Path, suffix_to_strip: str = "") -> str:
     stem = path.stem
+    if stem.endswith(".nii"):
+        stem = Path(stem).stem
     if suffix_to_strip and stem.endswith(suffix_to_strip):
         stem = stem[: -len(suffix_to_strip)]
     return stem
@@ -36,11 +39,19 @@ def collect_case_files(folder: Path, allowed_suffixes: set[str], suffix_to_strip
     for path in folder.rglob("*"):
         if not path.is_file():
             continue
-        if path.suffix.lower() not in allowed_suffixes:
+        # Special check for .nii.gz
+        if str(path).lower().endswith(".nii.gz"):
+            if ".nii.gz" not in allowed_suffixes:
+                continue
+        elif path.suffix.lower() not in allowed_suffixes:
             continue
+            
         case_id = case_id_from_path(path, suffix_to_strip)
         if case_id in mapping:
-            raise ValueError(f'Duplicate case id "{case_id}" found under {folder}.')
+            # If we have both .nii.gz and .png, we might get duplicates, let's prefer .nii.gz for now if it happens
+            if path.suffix.lower() == ".gz":
+                 mapping[case_id] = path
+            continue
         mapping[case_id] = path
     if not mapping:
         raise FileNotFoundError(f"No compatible files were found under {folder}.")
@@ -48,11 +59,15 @@ def collect_case_files(folder: Path, allowed_suffixes: set[str], suffix_to_strip
 
 
 def load_grayscale_image(path: Path) -> np.ndarray:
+    if str(path).lower().endswith(".nii.gz"):
+        return np.asarray(nib.load(str(path)).get_fdata()).astype(np.float32).squeeze()
     with Image.open(path) as image:
         return np.asarray(image.convert("L"))
 
 
 def load_label_image(path: Path) -> np.ndarray:
+    if str(path).lower().endswith(".nii.gz"):
+        return np.asarray(nib.load(str(path)).get_fdata()).astype(np.int32).squeeze()
     with Image.open(path) as image:
         array = np.asarray(image)
     if array.ndim != 2:
@@ -62,6 +77,9 @@ def load_label_image(path: Path) -> np.ndarray:
 
 def save_label_image(array: np.ndarray, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    if str(path).lower().endswith(".nii.gz"):
+        nib.save(nib.Nifti1Image(array.astype(np.int32), np.eye(4)), str(path))
+        return
     max_value = int(array.max()) if array.size else 0
     dtype = np.uint8 if max_value < 256 else np.uint16
     Image.fromarray(array.astype(dtype, copy=False)).save(path)

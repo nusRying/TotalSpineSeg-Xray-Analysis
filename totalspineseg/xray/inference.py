@@ -123,7 +123,7 @@ def run_nnunet_predict(
 def run_xray_inference(
     input_path: Path,
     output_path: Path,
-    dataset_id: int = 201,
+    dataset_id: int = 202,
     configuration: str = "2d",
     trainer: str = "nnUNetTrainer",
     plans: str = "nnUNetPlans",
@@ -199,19 +199,19 @@ def run_xray_inference(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run the milestone-2 X-ray nnU-Net baseline and postprocess vertebra components.",
+        description="Run the Full-Spine (C1-S1) X-ray nnU-Net model and postprocess vertebra components.",
         epilog=textwrap.dedent(
             """\
             Examples:
-              totalspineseg_xray_inference images out --dataset-id 201 --device cuda
-              totalspineseg_xray_inference images out --raw-preds-dir raw_preds
+              totalspineseg_xray_inference images out --dataset-id 202 --device cuda --ordered-labels "C1-L5"
+              totalspineseg_xray_inference images out --ordered-labels "T1-L5"
             """
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("input", type=Path, help="Input X-ray image or folder of images.")
     parser.add_argument("output", type=Path, help="Output folder.")
-    parser.add_argument("--dataset-id", type=int, default=201, help="nnU-Net dataset id.")
+    parser.add_argument("--dataset-id", type=int, default=202, help="nnU-Net dataset id.")
     parser.add_argument("--configuration", default="2d", help="nnU-Net configuration name.")
     parser.add_argument("--trainer", default="nnUNetTrainer", help="nnU-Net trainer name.")
     parser.add_argument("--plans", default="nnUNetPlans", help="nnU-Net plans name.")

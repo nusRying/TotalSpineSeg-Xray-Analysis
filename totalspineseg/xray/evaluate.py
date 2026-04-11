@@ -219,6 +219,26 @@ def evaluate_folder(
             writer.writerows(per_label_rows)
 
     summary = summarize_metrics(per_case_rows, ["dice", "iou", "precision", "recall"])
+    
+    # Anatomical Region Analysis
+    if per_label_rows:
+        regions = {
+            "Cervical": range(11, 20),
+            "Thoracic": range(21, 40),
+            "Lumbar": range(41, 50),
+            "Sacrum": [50]
+        }
+        region_stats = {}
+        for region_name, label_range in regions.items():
+            region_rows = [r for r in per_label_rows if int(r["label_value"]) in label_range]
+            if region_rows:
+                region_stats[region_name] = {
+                    "dice": statistics.fmean(float(r["dice"]) for r in region_rows),
+                    "iou": statistics.fmean(float(r["iou"]) for r in region_rows),
+                    "num_samples": len(region_rows)
+                }
+        summary["region_stats"] = region_stats
+
     if per_label_rows or evaluation_mode == "multiclass":
         label_summary = summarize_metrics(
             [row for row in per_case_rows if "label_dice" in row],

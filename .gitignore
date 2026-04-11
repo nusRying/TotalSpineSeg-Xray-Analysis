@@ -178,20 +178,29 @@ cython_debug/
 /totalspineseg/models/nnUNet
 
 # Files
-*.png
-*.csv
 *.nii.gz
 *.nii
+*.zip
+*.pth
 
 # Project specific ignores
 data/
 deliverables/
 logs/
-things from client/
-chat_with_client.md
-milestone 3.md
+milestone3_delivery/
 tmp_mendeley_page.html
-*.pdf
+
+# Allow specific documentation and result files
+!things from client/*.md
+!docs/*.md
+!README_XRAY.md
+!requirements.txt
+!requirements-xray.txt
+!dice_distribution.png
+!metrics_summary.json
+!sample_result_1.png
+!sample_result_2.png
+!per_case_metrics.csv
 
 # Secrets and Private Information
 .env
