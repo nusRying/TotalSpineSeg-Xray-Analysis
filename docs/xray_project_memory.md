@@ -41,72 +41,59 @@ Based on the `model_comparison_for_developer.pdf` provided by the client, three 
 
 ---
 
-## **5. Milestone Tracking & History**
+## **6. Milestone Tracking & History**
 
 ### **Milestone 1–3 (COMPLETED)**
 - Successfully adapted framework to 2D.
 - Trained on hybrid dataset (AASCE, CSXA, Synthetic Phantoms).
 - Result: **91.4% Mean Dice** on 1,143 test cases.
 
-- **4.3 Deployment (SUCCESS):** High-accuracy training completed on A40 server.
-- **FINAL TEST BENCHMARK:** Reached **96.12% Mean Dice** on 993 unseen test cases.
-- **DEPLOYMENT (SUCCESS):** Milestone4_Delivery folder set up on the server as a 'Clean Showcase' for the client.
-- **Status:** 🏁 **MILESTONE 4 HANDOVER READY**
+### **Milestone 4.0: Accuracy Push (COMPLETED)**
+- Reached **96.12% Mean Dice** on 993 unseen test cases.
+- Handed over `Milestone4_Delivery` to client on A40 server.
+
+### **Milestone 4.5: The Clinical Conversion (DEVELOPMENT COMPLETE)**
+Today's session (2026-04-28) shifted the project from "Experimental" to **"Surgical-Grade Clinical Suite"**.
+- [x] **Geometric Diagnostic Engine:** Cobb's Angle + A/P height ratios.
+- [x] **Anatomical Integrity:** Transitioned from boxes to Morphometric high-fidelity bone contours.
+- [x] **Hospital-Ready:** Native DICOM support and Clinical JSON exports.
+- [x] **Branding & Documentation:** Overhauled `README.md` and `docs/` for enterprise visibility.
+- [x] **Status:** 🚀 **A100 SERVER READY** (Training execution pending Ali's overnight run).
 
 ---
 
-## **5. Termination & Handover Protocol**
-- **Criteria:** Stop training when `val_loss` plateaus (target: 200-300 epochs).
-- **Export:** Download `checkpoint_best.pth` to local `weights/` via SCP.
-- **Handover:** Notify Ali once training is complete to allow server teardown.
+## **7. Future Roadmap**
+- **Milestone 5:** Anatomical Robustness (Landmark Anchoring for high-noise images).
+- **Milestone 6:** Final Technical Paper & Diagnostic Accuracy Validation.
+- **Milestone 7:** PACS Integration (Live Hospital Workflow).
 
 ---
 
-## **6. Hardware & Environment (ACTUAL)**
-- **GPU:** NVIDIA A40-8Q (vGPU slice).
-- **VRAM:** 8GB (8192 MiB).
-- **Constraint:** Batch size limited to 2-4 for high-res training.
+## **8. Finalized Dataset Strategy (LOCKED 2026-04-28)**
+- **AASCE** (Baseline): T1–L5 landmarks.
+- **VinDr-SpineXR** (~10,000 images): C1–S1 pathology.
+- **CSXA V3.0** (~4,963 images): Lateral cervical C2–C7.
+- **Total Target**: **~15,500 images**.
 
 ---
 
-## **6. Future Roadmap**
-- **Milestone 4.5: The "End Goal" Hardening (IN PROGRESS — Server Ready)**
-    - [x] Phase 1: Annotation Engine (Implementation Complete).
-    - [x] Phase 2: Morphological Separation / Watershed (Complete).
-    - [x] Phase 3: Anatomical Template Warping / Bone Contours (Complete).
-    - [x] Phase 4: Clinical Geometry Engine — Cobb's Angle, Height Ratios, Surgical JSON (Complete).
-    - [x] Phase 5: DICOM Hospital File Ingestion (Complete).
-    - [ ] Phase 6: A100 Server Training Run (Ali — NEXT ACTION).
-
-## **7. Finalized Dataset Strategy (LOCKED 2026-04-28)**
-- **AASCE** (Baseline): ~600 AP thoracolumbar X-rays, T1–L5 landmarks.
-- **VinDr-SpineXR** (~10,000 images): Full spine C1–S1, pathological diversity (fractures, osteophytes). Download via PhysioNet: `umairejaz04 / Umair@825`.
-- **CSXA V3.0** (~4,963 images): Lateral cervical C2–C7. Download via SciDB.
-- **C1 (Atlas) Strategy**: No public X-ray dataset exists for C1. Output C1 with dashed/uncertain rendering — consistent with client's own reference images which already show `T1?` with dashed borders.
-- **Total Target**: ~15,500 images across all 3 sources.
-
-## **8. Key Code Commits (2026-04-28)**
-- `e42cc46` — Annotation Engine, Watershed separation, Anatomical template warping.
-- `2723a92` — Clinical Geometry Engine (`geometry.py`), DICOM support, Surgical JSON export.
-- `6b85a84` — Overhaul `.gitignore` + `docs/server_deployment_guide.md` added.
-- **Milestone 5:** Anatomical Robustness (Landmark Anchoring).
-- **Milestone 6:** Medical Analytics (Geometry Engine & Reporting).
-- **Milestone 7:** Clinical Integration (DICOM, PACS, Active Learning).
+## **9. Key Code Commits (2026-04-28)**
+- `e42cc46` — Annotation Engine & Watershed.
+- `2723a92` — Geometry Engine & DICOM.
+- `6b85a84` — Server Deployment Guide.
+- `58d6e9b` — Clinical Branding README upgrade.
 
 ---
 
-## **5. Workspace Directory Map**
-- `totalspineseg/`: Source code and 2D adaptation.
-- `docs/`: Master Proposal, Technical Guides, and Client Briefings.
-- `weights/`: Standardized Milestone 3/4 Model Weights.
-- `config/`: Portable requirements and environment files.
-- `archive/`: Previous milestone deliveries and raw legacy data.
-- `reports/`: Current performance metrics and visual overlays.
+## **10. Workspace Directory Map**
+- `totalspineseg/`: Source code.
+- `docs/`: Deployment Guides, Project Memory, and Clinical Briefings.
+- `weights/`: Pre-trained Milestone 3/4 weights.
+- `scripts/`: Training, data prep, and mask generation pipelines.
 
 ---
 
-## **6. Key Reference Documents**
-- `docs/xray_full_project_proposal.md`: Single-file toolkit for client meetings.
-- `docs/xray_technical_guides.md`: Engineering blueprints (A100 Training & Metrics Math).
-- `docs/xray_client_briefings.md`: Quick-response sheet for GPU and Metrics questions.
-- `README_DOCKER.md`: Container deployment guide.
+## **11. Key Reference Documents**
+- `docs/server_deployment_guide.md`: **PRIMARY GUIDE FOR ALI.**
+- `docs/xray_full_project_proposal.md`: Proposal for client.
+- `docs/session_log_2026_04_28.md`: Detailed session history.
