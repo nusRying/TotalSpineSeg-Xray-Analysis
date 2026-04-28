@@ -210,38 +210,41 @@ Key points:
 - step1_levels: single voxel in canal centerline at each IVD level, numbered from C1 (1 above C1, 2 above C2, etc.)
 - step2_output: final labeled vertebrae, discs, cord, and canal
 
-## Clinical X-Ray Diagnostic Pipeline (2D)
+## 🩺 Clinical X-Ray Analysis Suite (2D)
 
-TotalSpineSeg includes a production-grade 2D pipeline for automated spinal diagnostics on **AP and Lateral X-rays**. This engine is designed for surgical planning and clinical reporting.
+TotalSpineSeg has been extended with a dedicated **Surgical & Diagnostic Engine** for 2D Radiographs. This suite transitions the project from basic segmentation to fully automated clinical reporting for Scoliosis and Vertebral Compression Monitoring.
 
-### Core Features:
-- **Clinical Geometry Engine:** Automated extraction of:
-    - **Cobb's Angle:** Maximum curvature calculation for scoliosis diagnostics.
-    - **Vertebral Height Ratios:** Anterior/Posterior ratio for compression fracture detection.
-    - **Surgical Landmarks:** 4-corner coordinates exported in clinical JSON format.
-- **Anatomical Template Warping:** Uses high-fidelity anatomical bone contours instead of simple bounding boxes.
-- **Watershed Segmentation:** Resolves "blobbing" in crowded thoracic regions for discrete vertebral instances.
-- **DICOM Integration:** Native support for hospital `.dcm` and `.dicom` files with automatic intensity rescaling.
+### 💎 Key Clinical Capabilities
+*   **Automated Scoliosis Assessment:** Real-time **Cobb's Angle** calculation by identifying the most tilted vertebrae in the spinal curve.
+*   **Fracture & Osteoporosis Screening:** Automated **Morphometric Analysis** (Anterior/Posterior height ratios) to detect vertebral compression fractures.
+*   **Surgical Landmark Extraction:** Precise 4-corner coordinate mapping (L1–S1) exported as surgical-ready JSON for PACS/Pre-op integration.
+*   **Anatomical Fidelity:** High-fidelity polygon masks that respect true bone morphology (Cervical to Sacrum).
 
-### X-Ray Usage:
+### 🚀 Quick Start (X-Ray)
 
-1. **Inference (with Geometry):**
-   ```bash
-   totalspineseg_xray_inference INPUT_IMAGE OUTPUT_FOLDER --dataset-id 202
-   ```
-   This generates:
-   - `segmentation.png`: High-fidelity anatomical overlays.
-   - `postprocess_summary.json`: The "Geometry Report" containing Cobb angles and bone metrics.
+#### 1. Full Diagnostic Inference
+Process a clinical image and generate a complete diagnostic JSON report + anatomical overlays.
+```bash
+totalspineseg_xray_inference input.png output_dir --dataset-id 202
+```
 
-2. **Metrics & Landmarks:**
-   ```bash
-   totalspineseg_xray_postprocess PREDICTION_MASK OUTPUT_FOLDER --geometry
-   ```
+#### 2. Local Desktop Inference (No GPU)
+The X-ray models are optimized to run on standard CPUs for field diagnostic use.
+```bash
+totalspineseg_xray_inference input.png output_dir --cpu
+```
 
-### X-Ray Documentation:
-- [Server Deployment & A100 Training Guide](docs/server_deployment_guide.md)
-- [Clinical Geometry Engine Details](totalspineseg/xray/geometry.py)
-- [Landmark-to-Anatomical Workflow](scripts/xray_landmarks_to_mask.py)
+### 📊 Clinical Output Samples
+| Metric | Description | Clinical Use |
+| :--- | :--- | :--- |
+| **Cobb's Angle** | Max tilt between vertebrae | Scoliosis Magnitude |
+| **A/P Ratio** | Height discrepancy | Fracture Risk (Genant Grade) |
+| **Vertebral Corners** | Cartesian (x,y) coordinates | Pre-surgical planning |
+
+### 📂 Technical Implementation & Docs
+- [**Server Training Blueprint**](docs/server_deployment_guide.md) — Step-by-step for A100 environments.
+- [**Geometry Engine Specs**](totalspineseg/xray/geometry.py) — Math logic for clinical metrics.
+- [**Project Memory**](docs/xray_project_memory.md) — Roadmap and Dataset Strategy.
 
 Examples:
 
