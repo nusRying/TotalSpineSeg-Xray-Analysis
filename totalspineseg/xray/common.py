@@ -6,8 +6,8 @@ import nibabel as nib
 from PIL import Image, ImageDraw, ImageFont
 
 
-SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".jpg", ".jpeg", ".nii.gz"}
-SUPPORTED_LABEL_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".nii.gz"}
+SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".jpg", ".jpeg", ".nii.gz", ".dcm", ".dicom"}
+SUPPORTED_LABEL_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".nii.gz", ".dcm", ".dicom"}
 OVERLAY_COLORS = np.asarray(
     [
         [230, 57, 70],
@@ -61,6 +61,19 @@ def collect_case_files(folder: Path, allowed_suffixes: set[str], suffix_to_strip
 def load_grayscale_image(path: Path) -> np.ndarray:
     if str(path).lower().endswith(".nii.gz"):
         return np.asarray(nib.load(str(path)).get_fdata()).astype(np.float32).squeeze()
+    
+    if path.suffix.lower() in {".dcm", ".dicom"}:
+        try:
+            import pydicom
+            ds = pydicom.dcmread(path)
+            # Apply rescale intercept/slope if present for proper Hounsfield Units / Pixel Intensity
+            array = ds.pixel_array.astype(np.float32)
+            if hasattr(ds, 'RescaleIntercept') and hasattr(ds, 'RescaleSlope'):
+                array = array * ds.RescaleSlope + ds.RescaleIntercept
+            return array
+        except ImportError:
+            raise ImportError("pydicom is required for clinical DICOM support. Please run 'pip install pydicom'.")
+
     with Image.open(path) as image:
         return np.asarray(image.convert("L"))
 

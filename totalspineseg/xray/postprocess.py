@@ -33,6 +33,10 @@ from .labels import (
     label_name_map,
     ordered_label_values_from_spec,
 )
+from .geometry import (
+    calculate_cobb_angle,
+    get_surgical_landmarks,
+)
 
 
 def component_bbox(component_mask: np.ndarray) -> list[int]:
@@ -123,7 +127,6 @@ def finalize_component_entries(
             item["summary"]["centroid_x"],
         ),
     )
-
     summaries: list[dict[str, object]] = []
     for ordered_label, entry in enumerate(sorted_entries, start=1):
         component_mask = entry["mask"]
@@ -143,10 +146,25 @@ def finalize_component_entries(
             if label_name is not None:
                 component_summary["label_name"] = label_name
 
+        # Extract surgical-grade landmarks and height ratios
+        landmarks = get_surgical_landmarks(component_mask)
+        component_summary.update(landmarks)
+
         summaries.append(component_summary)
+    
+    # Calculate global spinal metrics (e.g. Cobb's Angle)
+    if len(summaries) >= 2:
+        component_masks = [e["mask"] for e in sorted_entries]
+        cobb_angle, cobb_indices = calculate_cobb_angle(component_masks)
+        global_metrics = {
+            "max_cobb_angle": float(cobb_angle),
+            "cobb_vertebrae_indices": list(cobb_indices)
+        }
+    else:
+        global_metrics = {"max_cobb_angle": 0.0, "cobb_vertebrae_indices": []}
 
     cleaned_binary = (ordered > 0).astype(np.uint8)
-    return cleaned_binary, ordered, labeled, summaries
+    return cleaned_binary, ordered, labeled, summaries, global_metrics
 
 
 def postprocess_binary_prediction(
@@ -175,7 +193,7 @@ def postprocess_binary_prediction(
         )
         assignment_mode = ordered_label_anchor
 
-    cleaned_binary, ordered, labeled, component_summaries = finalize_component_entries(
+    cleaned_binary, ordered, labeled, component_summaries, global_metrics = finalize_component_entries(
         entries,
         output_shape=prediction.shape,
         known_label_names=known_label_names,
@@ -190,6 +208,7 @@ def postprocess_binary_prediction(
         "max_components": None if max_components is None else int(max_components),
         "fill_holes": bool(fill_holes),
         "ordered_label_assignment": assignment_mode,
+        "clinical_metrics": global_metrics,
         "components": component_summaries,
     }
     return cleaned_binary, ordered, labeled, summary
@@ -227,7 +246,7 @@ def postprocess_multiclass_prediction(
         )
         all_entries.extend(label_entries)
 
-    cleaned_binary, ordered, labeled, component_summaries = finalize_component_entries(
+    cleaned_binary, ordered, labeled, component_summaries, global_metrics = finalize_component_entries(
         all_entries,
         output_shape=prediction.shape,
         known_label_names=known_label_names,
@@ -243,6 +262,7 @@ def postprocess_multiclass_prediction(
         "ordered_label_assignment": "raw_multiclass",
         "labels_present": positive_values,
         "labels": label_summaries,
+        "clinical_metrics": global_metrics,
         "components": component_summaries,
     }
     return cleaned_binary, ordered, labeled, summary
