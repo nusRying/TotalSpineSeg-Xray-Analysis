@@ -1,0 +1,268 @@
+{
+    "num_cases": 1,
+    "prediction_mode": "auto",
+    "min_area": 64,
+    "max_components": null,
+    "max_components_per_label": 1,
+    "fill_holes": true,
+    "ordered_label_anchor": "strict",
+    "ordered_label_values": [
+        32,
+        41,
+        42,
+        43,
+        44,
+        45
+    ],
+    "label_map_json": null,
+    "cases": [
+        {
+            "prediction_mode": "binary",
+            "num_components_raw": 6,
+            "num_components_kept": 6,
+            "num_components_removed": 0,
+            "min_area": 64,
+            "max_components": null,
+            "fill_holes": true,
+            "ordered_label_assignment": "strict",
+            "clinical_metrics": {
+                "max_cobb_angle": 14.27902101587035,
+                "cobb_vertebrae_indices": [
+                    2,
+                    5
+                ]
+            },
+            "components": [
+                {
+                    "component_id": 1,
+                    "area": 8696,
+                    "centroid_y": 250.5,
+                    "centroid_x": 269.0,
+                    "bbox": [
+                        187,
+                        227,
+                        314,
+                        311
+                    ],
+                    "ordered_label": 1,
+                    "label_value": 32,
+                    "label_name": "T12",
+                    "corners": {
+                        "top_left": [
+                            227,
+                            212
+                        ],
+                        "top_right": [
+                            311,
+                            187
+                        ],
+                        "bottom_right": [
+                            311,
+                            289
+                        ],
+                        "bottom_left": [
+                            227,
+                            314
+                        ]
+                    },
+                    "centroid": [
+                        269.0,
+                        250.5
+                    ],
+                    "height_ratio": 1.0
+                },
+                {
+                    "component_id": 2,
+                    "area": 5660,
+                    "centroid_y": 361.4464664310954,
+                    "centroid_x": 274.3296819787986,
+                    "bbox": [
+                        311,
+                        236,
+                        411,
+                        319
+                    ],
+                    "ordered_label": 2,
+                    "label_value": 41,
+                    "label_name": "L1",
+                    "corners": {
+                        "top_left": [
+                            237,
+                            338
+                        ],
+                        "top_right": [
+                            304,
+                            311
+                        ],
+                        "bottom_right": [
+                            319,
+                            381
+                        ],
+                        "bottom_left": [
+                            236,
+                            411
+                        ]
+                    },
+                    "centroid": [
+                        274.3296819787986,
+                        361.4464664310954
+                    ],
+                    "height_ratio": 1.553191489361702
+                },
+                {
+                    "component_id": 3,
+                    "area": 5295,
+                    "centroid_y": 452.7675165250236,
+                    "centroid_x": 285.68536355051936,
+                    "bbox": [
+                        400,
+                        243,
+                        505,
+                        329
+                    ],
+                    "ordered_label": 3,
+                    "label_value": 42,
+                    "label_name": "L2",
+                    "corners": {
+                        "top_left": [
+                            243,
+                            440
+                        ],
+                        "top_right": [
+                            311,
+                            400
+                        ],
+                        "bottom_right": [
+                            329,
+                            466
+                        ],
+                        "bottom_left": [
+                            259,
+                            505
+                        ]
+                    },
+                    "centroid": [
+                        285.68536355051936,
+                        452.7675165250236
+                    ],
+                    "height_ratio": 0.9743589743589743
+                },
+                {
+                    "component_id": 4,
+                    "area": 5268,
+                    "centroid_y": 537.3942672741078,
+                    "centroid_x": 308.08807896735004,
+                    "bbox": [
+                        487,
+                        267,
+                        585,
+                        355
+                    ],
+                    "ordered_label": 4,
+                    "label_value": 43,
+                    "label_name": "L3",
+                    "corners": {
+                        "top_left": [
+                            267,
+                            521
+                        ],
+                        "top_right": [
+                            329,
+                            487
+                        ],
+                        "bottom_right": [
+                            355,
+                            554
+                        ],
+                        "bottom_left": [
+                            277,
+                            585
+                        ]
+                    },
+                    "centroid": [
+                        308.08807896735004,
+                        537.3942672741078
+                    ],
+                    "height_ratio": 2.1481481481481484
+                },
+                {
+                    "component_id": 5,
+                    "area": 5788,
+                    "centroid_y": 618.7087076710435,
+                    "centroid_x": 324.68711126468554,
+                    "bbox": [
+                        572,
+                        278,
+                        665,
+                        373
+                    ],
+                    "ordered_label": 5,
+                    "label_value": 44,
+                    "label_name": "L4",
+                    "corners": {
+                        "top_left": [
+                            278,
+                            600
+                        ],
+                        "top_right": [
+                            358,
+                            572
+                        ],
+                        "bottom_right": [
+                            373,
+                            637
+                        ],
+                        "bottom_left": [
+                            289,
+                            665
+                        ]
+                    },
+                    "centroid": [
+                        324.68711126468554,
+                        618.7087076710435
+                    ],
+                    "height_ratio": 1.2291666666666667
+                },
+                {
+                    "component_id": 6,
+                    "area": 6184,
+                    "centroid_y": 704.5826326002588,
+                    "centroid_x": 341.04058861578267,
+                    "bbox": [
+                        655,
+                        292,
+                        748,
+                        389
+                    ],
+                    "ordered_label": 6,
+                    "label_value": 45,
+                    "label_name": "L5",
+                    "corners": {
+                        "top_left": [
+                            292,
+                            683
+                        ],
+                        "top_right": [
+                            370,
+                            655
+                        ],
+                        "bottom_right": [
+                            389,
+                            734
+                        ],
+                        "bottom_left": [
+                            308,
+                            748
+                        ]
+                    },
+                    "centroid": [
+                        341.04058861578267,
+                        704.5826326002588
+                    ],
+                    "height_ratio": 0.9318181818181818
+                }
+            ],
+            "case_id": "test_image"
+        }
+    ]
+}
