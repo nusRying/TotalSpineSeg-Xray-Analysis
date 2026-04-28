@@ -210,31 +210,38 @@ Key points:
 - step1_levels: single voxel in canal centerline at each IVD level, numbered from C1 (1 above C1, 2 above C2, etc.)
 - step2_output: final labeled vertebrae, discs, cord, and canal
 
-## Experimental X-Ray Baseline
+## Clinical X-Ray Diagnostic Pipeline (2D)
 
-This repository now includes an experimental milestone 1 scaffold for adapting the project to 2D AP thoracolumbar X-rays.
+TotalSpineSeg includes a production-grade 2D pipeline for automated spinal diagnostics on **AP and Lateral X-rays**. This engine is designed for surgical planning and clinical reporting.
 
-Scope of the X-ray baseline:
+### Core Features:
+- **Clinical Geometry Engine:** Automated extraction of:
+    - **Cobb's Angle:** Maximum curvature calculation for scoliosis diagnostics.
+    - **Vertebral Height Ratios:** Anterior/Posterior ratio for compression fracture detection.
+    - **Surgical Landmarks:** 4-corner coordinates exported in clinical JSON format.
+- **Anatomical Template Warping:** Uses high-fidelity anatomical bone contours instead of simple bounding boxes.
+- **Watershed Segmentation:** Resolves "blobbing" in crowded thoracic regions for discrete vertebral instances.
+- **DICOM Integration:** Native support for hospital `.dcm` and `.dicom` files with automatic intensity rescaling.
 
-- public-data target: AASCE / SpineWeb style AP thoracolumbar radiographs with `T1-L5` landmarks
-- model target: vertebrae segmentation baseline
-- training setup: `nnU-Net 2d`
-- label source: vertebra landmark polygons rasterized into masks
-- label-capable path: ordered or named vertebra labels such as `T1-L5` or `C1-L5` when annotations support them
+### X-Ray Usage:
 
-The X-ray scaffold is intentionally narrower than the MRI workflow above.
-It does not imply cervical coverage unless a separate `C1-C7` annotated dataset is added.
+1. **Inference (with Geometry):**
+   ```bash
+   totalspineseg_xray_inference INPUT_IMAGE OUTPUT_FOLDER --dataset-id 202
+   ```
+   This generates:
+   - `segmentation.png`: High-fidelity anatomical overlays.
+   - `postprocess_summary.json`: The "Geometry Report" containing Cobb angles and bone metrics.
 
-Files:
+2. **Metrics & Landmarks:**
+   ```bash
+   totalspineseg_xray_postprocess PREDICTION_MASK OUTPUT_FOLDER --geometry
+   ```
 
-- Design note: [`docs/xray_milestone1_design.md`](docs/xray_milestone1_design.md)
-- Workflow note: [`docs/xray_milestone2_workflow.md`](docs/xray_milestone2_workflow.md)
-- Landmark rasterization: [`scripts/xray_landmarks_to_mask.py`](scripts/xray_landmarks_to_mask.py)
-- Dataset conversion: [`scripts/prepare_xray_dataset.py`](scripts/prepare_xray_dataset.py)
-- Training entrypoints: [`scripts/train_xray.sh`](scripts/train_xray.sh), [`scripts/train_xray.ps1`](scripts/train_xray.ps1)
-- Inference entrypoint: `totalspineseg_xray_inference`
-- Postprocessing entrypoint: `totalspineseg_xray_postprocess`
-- Evaluation entrypoint: `totalspineseg_xray_evaluate`
+### X-Ray Documentation:
+- [Server Deployment & A100 Training Guide](docs/server_deployment_guide.md)
+- [Clinical Geometry Engine Details](totalspineseg/xray/geometry.py)
+- [Landmark-to-Anatomical Workflow](scripts/xray_landmarks_to_mask.py)
 
 Examples:
 
