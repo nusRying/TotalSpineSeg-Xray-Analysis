@@ -70,10 +70,25 @@ Based on the `model_comparison_for_developer.pdf` provided by the client, three 
 ---
 
 ## **6. Future Roadmap**
-- **Milestone 4.5: The "End Goal" Hardening (STAGING)**
+- **Milestone 4.5: The "End Goal" Hardening (IN PROGRESS — Server Ready)**
     - [x] Phase 1: Annotation Engine (Implementation Complete).
-    - [x] Phase 2: Morphological Separation (Implementation Complete).
-    - [/] Phase 3: Anatomical Retraining (IMPLEMENTING).
+    - [x] Phase 2: Morphological Separation / Watershed (Complete).
+    - [x] Phase 3: Anatomical Template Warping / Bone Contours (Complete).
+    - [x] Phase 4: Clinical Geometry Engine — Cobb's Angle, Height Ratios, Surgical JSON (Complete).
+    - [x] Phase 5: DICOM Hospital File Ingestion (Complete).
+    - [ ] Phase 6: A100 Server Training Run (Ali — NEXT ACTION).
+
+## **7. Finalized Dataset Strategy (LOCKED 2026-04-28)**
+- **AASCE** (Baseline): ~600 AP thoracolumbar X-rays, T1–L5 landmarks.
+- **VinDr-SpineXR** (~10,000 images): Full spine C1–S1, pathological diversity (fractures, osteophytes). Download via PhysioNet: `umairejaz04 / Umair@825`.
+- **CSXA V3.0** (~4,963 images): Lateral cervical C2–C7. Download via SciDB.
+- **C1 (Atlas) Strategy**: No public X-ray dataset exists for C1. Output C1 with dashed/uncertain rendering — consistent with client's own reference images which already show `T1?` with dashed borders.
+- **Total Target**: ~15,500 images across all 3 sources.
+
+## **8. Key Code Commits (2026-04-28)**
+- `e42cc46` — Annotation Engine, Watershed separation, Anatomical template warping.
+- `2723a92` — Clinical Geometry Engine (`geometry.py`), DICOM support, Surgical JSON export.
+- `6b85a84` — Overhaul `.gitignore` + `docs/server_deployment_guide.md` added.
 - **Milestone 5:** Anatomical Robustness (Landmark Anchoring).
 - **Milestone 6:** Medical Analytics (Geometry Engine & Reporting).
 - **Milestone 7:** Clinical Integration (DICOM, PACS, Active Learning).
