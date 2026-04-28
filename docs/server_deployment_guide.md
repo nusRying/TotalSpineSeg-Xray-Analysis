@@ -41,24 +41,19 @@ source ~/.bashrc
 
 ---
 
-## PHASE 2: Dataset Acquisition (Massive Download)
+## PHASE 2: Automated Dataset Acquisition
+
+We have unified all downloads into a single, resume-supported script.
 
 ```bash
-# 2.1 Prepare directories
-mkdir -p "$TOTALSPINESEG_DATA/raw_external/VinDr_SpineXR"
-mkdir -p "$TOTALSPINESEG_DATA/raw_external/CSXA_V3"
+cd ~/TotalSpineSeg-Xray-Analysis
 
-# 2.2 Download VinDr-SpineXR (~36GB) — This will take a while
-cd "$TOTALSPINESEG_DATA/raw_external/VinDr_SpineXR"
-wget -r -N -c -np --user umairejaz04 --password "Umair@825" \
-  https://physionet.org/files/vindr-spinexr/1.0.0/
-
-# 2.3 Download CSXA V3.0 (~3GB)
-cd "$TOTALSPINESEG_DATA/raw_external/CSXA_V3"
-wget -O images.zip "https://china.scidb.cn/download?fileId=801011b2c734ad280b9326a29358730f"
-wget -O labels.zip "https://china.scidb.cn/download?fileId=5dada884dd8d622531e826f2452e35d7"
-unzip -q images.zip -d images/
-unzip -q labels.zip -d annotations/
+# Run the downloader (This handles the 36GB VinDr + 3GB CSXA automatically)
+# Use your PhysioNet credentials (umairejaz04 / Umair@825)
+python3 scripts/fetch_xray_datasets.py \
+  --output-dir "$TOTALSPINESEG_DATA" \
+  --user umairejaz04 \
+  --password "Umair@825"
 ```
 
 ---
