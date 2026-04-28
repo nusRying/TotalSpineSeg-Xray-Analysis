@@ -1,0 +1,14 @@
+{
+    "channel_names": {
+        "0": "XRay"
+    },
+    "labels": {
+        "background": 0,
+        "vertebrae": 1
+    },
+    "numTraining": 3970,
+    "file_ending": ".png",
+    "name": "Dataset202_TotalSpineSeg_XRay_Thoracolumbar_AP",
+    "reference": "AASCE 2019 / SpineWeb Dataset 16 AP thoracolumbar radiographs with T1-L5 landmarks",
+    "description": "2D AP thoracolumbar X-ray vertebrae segmentation baseline for TotalSpineSeg."
+}

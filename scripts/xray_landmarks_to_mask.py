@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
+from skimage.transform import ProjectiveTransform
 
 if __package__ in {None, ""}:
     repo_root = Path(__file__).resolve().parents[1]
@@ -26,6 +27,22 @@ class PolygonAnnotation:
     order_value: float | None
     label_value: int | None
     points: list[tuple[float, float]]
+
+
+# Anatomical Templates: Landmarks (0,0)-(1,1) map to the body corners.
+# Points can extend outside [0, 1] to capture posterior elements.
+LATERAL_VERTEBRA_TEMPLATE = [
+    (0.0, 0.0), (1.0, 0.0), (1.0, 0.2), 
+    (1.4, 0.5), (1.4, 0.6), (1.0, 0.8), 
+    (1.0, 1.0), (0.0, 1.0), (-0.1, 0.5)
+]
+
+# AP template focuses on the body with slight transverse process hints
+AP_VERTEBRA_TEMPLATE = [
+    (0.0, 0.0), (0.5, -0.05), (1.0, 0.0),
+    (1.1, 0.5), (1.0, 1.0), (0.5, 1.05),
+    (0.0, 1.0), (-0.1, 0.5)
+]
 
 
 def parse_args():
@@ -94,6 +111,12 @@ def parse_args():
         choices=[".png", ".bmp", ".tif"],
         default=".png",
         help="Lossless file format for output masks.",
+    )
+    parser.add_argument(
+        "--anatomical",
+        action="store_true",
+        default=False,
+        help="Use high-fidelity anatomical templates instead of simple quadrilaterals.",
     )
     parser.add_argument(
         "--overwrite",
@@ -228,9 +251,15 @@ def render_mask(
     normalized: bool,
     mode: str,
     ordered_label_values: list[int] | None = None,
+    anatomical: bool = False,
 ) -> np.ndarray:
     with Image.open(image_path) as image:
         width, height = image.size
+    
+    # Heuristic to detect lateral vs AP based on case_id or aspect ratio
+    # For now, default to Lateral style if anatomical is on.
+    is_lateral = "lateral" in str(image_path).lower() or "_lat" in str(image_path).lower()
+    template = LATERAL_VERTEBRA_TEMPLATE if is_lateral else AP_VERTEBRA_TEMPLATE
 
     sorted_annotations = sort_annotations(annotations)
     mask = Image.new("L", (width, height), 0)
@@ -257,7 +286,25 @@ def render_mask(
                 fill_value = annotation.label_value
 
         polygon = scale_points(annotation.points, width, height, normalized)
-        draw.polygon(polygon, fill=fill_value)
+        
+        if anatomical:
+            # Warp the anatomical template to fit the 4 quadrilateral landmarks
+            # Input landmarks: TL, TR, BR, BL
+            # Template Body Corners: (0,0), (1,0), (1,1), (0,1)
+            src = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=np.float32)
+            dst = np.array(polygon, dtype=np.float32)
+            
+            tf = ProjectiveTransform()
+            if tf.estimate(src, dst):
+                # Map all template points through the transform
+                warped_pts = tf(np.array(template))
+                warped_polygon = [(int(round(pt[0])), int(round(pt[1]))) for pt in warped_pts]
+                draw.polygon(warped_polygon, fill=fill_value)
+            else:
+                # Fallback to simple polygon if warping fails
+                draw.polygon(polygon, fill=fill_value)
+        else:
+            draw.polygon(polygon, fill=fill_value)
 
     return np.asarray(mask, dtype=np.uint16)
 
@@ -297,6 +344,7 @@ def main():
             args.normalized,
             args.mode,
             ordered_label_values=ordered_label_values,
+            anatomical=args.anatomical,
         )
         Image.fromarray(mask).save(output_path)
         written += 1

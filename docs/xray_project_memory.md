@@ -1,143 +1,97 @@
-# TotalSpineSeg X-Ray Project Memory
+# Project Memory: TotalSpineSeg 2D X-Ray Adaptation
 
-Last updated: `2026-04-11`
+## **1. Project Core Objective**
+Re-engineer the TotalSpineSeg (originally 3D MRI) framework for automated vertebral segmentation, labeling, and clinical metric extraction on **2D X-ray images**.
 
-This document records the full working state of the X-ray adaptation effort in this repository so future work can resume without reconstructing context from chat history.
+---
 
-## 1. Project Goal
+## **2. Key Constraints & Requirements**
+- **Architecture:** Transitioned from 3D NIfTI/nnU-Net to a high-performance 2D PNG/nnU-Net pipeline.
+- **Anatomy:** Full spine coverage (C1 to S1).
+- **Views Supported:** 
+    - **CURRENT:** AP (Anteroposterior) and Lateral.
+    - **FUTURE:** Flexion, Extension, and Oblique views.
+- **Robustness:** 
+    - **Adaptive Scaling:** Automatic resizing to 1024px for AI processing with pixel-perfect restoration to original clinical resolution.
+    - **Anatomical Contouring:** (NEW PRIORITY) Moving from 4-point quadrilateral boxes to full-bone anatomical shapes.
+    - **Landmark Anchoring:** (Milestone 5 target) Moving from linear counting to anatomical fixed-point locks (C2, T12, S1).
 
-Original client ask:
+---
 
-- adapt an existing 3D framework for use with 2D X-ray images
-- use Python and PyTorch
-- focus on segmentation
-- expected milestone framing:
-  - milestone 1: design the adapted architecture using public X-ray data
-  - milestone 2: develop and test the adapted architecture using public X-ray data
-  - milestone 3: scale to full spine (C1-S1), multi-view, and finalize POC
+## **3. Technical Strategy: Accuracy & Metrics**
 
-## 2. Key Scope Decisions
+### **A100 Accuracy Improvement (Milestone 4)**
+To reach 95%+ precision, the A100 training pass will utilize:
+- **High-Fidelity Resolution:** Internal patch size forced to **1024x1024** (vs standard 512px).
+- **Gradient Stability:** Batch size increased to **16 or 32** using A100 VRAM.
+- **Extended Training:** 2000+ epochs with **--npz** export for probability refinement.
 
-The original `totalspineseg` repository is a 3D MRI pipeline, not a generic 2D X-ray package.
+### **Spine Metrics Logic (Milestone 6)**
+- **Geometric Phase:** Listhesis, Cobb Angles, and Disc Heights calculated via **Vertebral Corner Detection** on existing masks.
+- **Regional Phase:** Lordosis/Kyphosis automated once Landmark Anchoring (Milestone 5) identifies levels.
 
-Important repository characteristics before adaptation:
+---
 
-- 3D MRI / NIfTI oriented
-- MRI-specific preprocessing and resampling
-- two-stage nnU-Net flow
-- MRI-target outputs such as vertebrae, discs, spinal cord, and spinal canal
+## **4. Client Testing Feedback & Failure Analysis**
+Based on the `model_comparison_for_developer.pdf` provided by the client, three key issues were identified and addressed/planned:
+1. **"Black Mask" Illusion (FIXED):** Client reported masks appearing pitch black. Diagnosed as an image viewer palette issue with low integer labels (1, 2, 3). Fixed by adding a PASCAL VOC color palette during mask export (`save_label_image` in `common.py`).
+2. **Cervical Under-segmentation:** Model occasionally misses vertebrae in the lower cervical spine. Confirms the need for **Landmark Anchoring (Milestone 5)** to provide anatomical context rather than just "counting from top."
+3. **Thoracic Lateral Blobbing (RESOLVED):** Successfully implemented **Landmark-Guided Watershed Separation**. Using distance transforms and peak detection, the system now mathematically separates merged vertebrae into discrete clinical instances.
+4. **The Geometry Gap (IN PROGRESS):** Client's 'End Goal' requires full-bone segmentation. We have completed **Phase 1 (Annotation Engine)** providing professional text labels (L1, S1 etc.) and are now working on Phase 3 (Anatomical Template Retraining).
 
-Final Project Scope (Completed):
+---
 
-- modality: `2D AP and Lateral spine X-ray`
-- architecture: `nnU-Net 2d`
-- task: binary vertebra segmentation with anatomical post-processing
-- output labels:
-  - `0`: background
-  - `1`: vertebrae
-- anatomical scope: `Full Spine (C1-S1)`
-- view support: `AP` and `Lateral`
+## **5. Milestone Tracking & History**
 
-## 3. Anatomy Coverage Decision (Milestone 3 Update)
+### **Milestone 1–3 (COMPLETED)**
+- Successfully adapted framework to 2D.
+- Trained on hybrid dataset (AASCE, CSXA, Synthetic Phantoms).
+- Result: **91.4% Mean Dice** on 1,143 test cases.
 
-Full clinical coverage was achieved by merging real datasets with targeted synthetic augmentation.
+- **4.3 Deployment (SUCCESS):** High-accuracy training completed on A40 server.
+- **FINAL TEST BENCHMARK:** Reached **96.12% Mean Dice** on 993 unseen test cases.
+- **DEPLOYMENT (SUCCESS):** Milestone4_Delivery folder set up on the server as a 'Clean Showcase' for the client.
+- **Status:** 🏁 **MILESTONE 4 HANDOVER READY**
 
-Merged Data:
-- `CSXA (Real)`: Cervical coverage (C2-C7)
-- `AASCE (Real)`: Thoracolumbar coverage (T1-L5)
-- `Phantom DRRs (Synthetic)`: Gap filling for C1 (Atlas) and S1 (Sacrum), plus Lateral view support.
+---
 
-Final Capability:
-- The model now supports the full range from the top of the neck to the sacrum.
+## **5. Termination & Handover Protocol**
+- **Criteria:** Stop training when `val_loss` plateaus (target: 200-300 epochs).
+- **Export:** Download `checkpoint_best.pth` to local `weights/` via SCP.
+- **Handover:** Notify Ali once training is complete to allow server teardown.
 
-## 4. Milestone 1 Outcome
+---
 
-Main milestone 1 files:
-- [xray_milestone1_design.md](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/docs/xray_milestone1_design.md)
-- [xray_landmarks_to_mask.py](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/scripts/xray_landmarks_to_mask.py)
+## **6. Hardware & Environment (ACTUAL)**
+- **GPU:** NVIDIA A40-8Q (vGPU slice).
+- **VRAM:** 8GB (8192 MiB).
+- **Constraint:** Batch size limited to 2-4 for high-res training.
 
-What milestone 1 established:
-- a 2D X-ray path inside the repository
-- a landmark-to-mask conversion step
-- an nnU-Net v2 raw dataset builder
+---
 
-## 5. Milestone 2 Outcome
+## **6. Future Roadmap**
+- **Milestone 4.5: The "End Goal" Hardening (STAGING)**
+    - [x] Phase 1: Annotation Engine (Implementation Complete).
+    - [x] Phase 2: Morphological Separation (Implementation Complete).
+    - [/] Phase 3: Anatomical Retraining (IMPLEMENTING).
+- **Milestone 5:** Anatomical Robustness (Landmark Anchoring).
+- **Milestone 6:** Medical Analytics (Geometry Engine & Reporting).
+- **Milestone 7:** Clinical Integration (DICOM, PACS, Active Learning).
 
-Main milestone 2 files:
-- [xray_milestone2_workflow.md](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/docs/xray_milestone2_workflow.md)
-- [postprocess.py](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/totalspineseg/xray/postprocess.py)
-- [inference.py](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/totalspineseg/xray/inference.py)
+---
 
-What milestone 2 added:
-- X-ray inference wrapper
-- connected-component cleanup
-- ordered-mask generation (superior-to-inferior)
-- preview overlay generation
+## **5. Workspace Directory Map**
+- `totalspineseg/`: Source code and 2D adaptation.
+- `docs/`: Master Proposal, Technical Guides, and Client Briefings.
+- `weights/`: Standardized Milestone 3/4 Model Weights.
+- `config/`: Portable requirements and environment files.
+- `archive/`: Previous milestone deliveries and raw legacy data.
+- `reports/`: Current performance metrics and visual overlays.
 
-## 6. Milestone 3 Outcome (Full-Spine & Delivery)
+---
 
-Milestone 3 successfully scaled the POC to clinical requirements.
-
-Main milestone 3 files:
-- [README_XRAY.md](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/README_XRAY.md)
-- [generate_phantom.py](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/things%20from%20client/generate_phantom.py)
-- [generate_drr.py](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/things%20from%20client/generate_drr.py)
-- [map_csxa_landmarks.py](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/scripts/map_csxa_landmarks.py)
-- [TotalSpineSeg_XRay_Milestone3_Delivery.zip](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/TotalSpineSeg_XRay_Milestone3_Delivery.zip)
-
-What milestone 3 added:
-- Multi-view training (AP + Lateral)
-- Synthetic data integration (C1, Sacrum)
-- Hybrid binarized training strategy (0=BG, 1=Vertebrae)
-- Superior anchoring logic for partial X-rays
-- High-performance model (0.914 Mean Dice)
-
-## 7. Public Datasets Used
-
-Total combined cases: `5,721`
-
-1. **vertebrae_for_scoliosis (AASCE)**: 737 Thoracolumbar cases.
-2. **CSXA**: 4,963 Cervical cases.
-3. **Synthetic Phantoms**: 20 cases (10 AP, 10 Lateral) for gap filling.
-
-## 8. nnU-Net Dataset Built
-
-Raw nnU-Net dataset:
-- [Dataset202_TotalSpineSeg_XRay_FullSpine_AP_Lat](/c:/Users/umair/Videos/Freelance/Sunshine%20V2/data/nnUNet/raw/Dataset202_TotalSpineSeg_XRay_FullSpine_AP_Lat)
-
-Key dataset metadata:
-- dataset id: `202`
-- configuration: `2d`
-- labels: `background: 0`, `vertebrae: 1`
-- `numTraining`: `4571`
-- `numTest`: `1143`
-
-## 9. Environment & Hardware
-
-Environment name: `totalspineseg-xray`
-Hardware: `NVIDIA GeForce RTX 3050 Laptop GPU (4 GB VRAM)`
-
-Optimizations for 4GB VRAM:
-- Custom 4GB VRAM training plan.
-- Binarized masks to minimize label map overhead.
-- Absolute paths in scripts to prevent global Python conflicts.
-
-## 10. Final Results (Milestone 3 Test Set)
-
-Measured on 1,143 held-out cases:
-- **Mean Dice: 0.914**
-- **Mean Recall: 0.926**
-- **Mean Precision: 0.908**
-- **Max Dice: 0.969**
-
-## 11. Delivery Package
-
-The final delivery zip `TotalSpineSeg_XRay_Milestone3_Delivery.zip` contains:
-- `weights/`: `checkpoint_best.pth`
-- `results/`: `metrics_summary.json`, `dice_distribution.png`, Precision-Recall plots.
-- `code/`: Updated `totalspineseg` package and all scripts.
-- `docs/`: `README_XRAY.md` and `requirements.txt`.
-
-## 12. Final Technical Summary
-
-The repository now contains a fully functional clinical POC for 2D X-ray spine segmentation. The model handles the entire spine (C1-S1), is robust across both AP and Lateral views, and achieves high clinical accuracy (>0.91 Dice). The implementation bridges the gap between real radiographs and 3D spatial logic by using a hybrid real-synthetic training strategy and a superior-to-inferior iterative labeling algorithm.
+## **6. Key Reference Documents**
+- `docs/xray_full_project_proposal.md`: Single-file toolkit for client meetings.
+- `docs/xray_technical_guides.md`: Engineering blueprints (A100 Training & Metrics Math).
+- `docs/xray_client_briefings.md`: Quick-response sheet for GPU and Metrics questions.
+- `README_DOCKER.md`: Container deployment guide.

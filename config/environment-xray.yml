@@ -1,0 +1,13 @@
+name: totalspineseg-xray
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - git
+  - pip:
+      - -e .[nnunetv2]
+
+# On Windows with an NVIDIA GPU, install the CUDA-enabled PyTorch wheels after
+# creating this environment:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124

@@ -1,0 +1,14 @@
+{
+    "channel_names": {
+        "0": "XRay"
+    },
+    "labels": {
+        "background": 0,
+        "vertebrae": 1
+    },
+    "numTraining": 4571,
+    "file_ending": ".png",
+    "name": "Dataset202_TotalSpineSeg_XRay_FullSpine_AP_Lat",
+    "reference": "Combined CSXA, AASCE, and Synthetic Full-Spine Phantoms.",
+    "description": "Binary 2D Full-Spine (C1-S1) X-ray vertebrae segmentation for Milestone 3."
+}

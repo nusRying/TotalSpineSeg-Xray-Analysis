@@ -1,3 +1,13 @@
+"""
+TotalSpineSeg X-Ray: Production Inference Pipeline
+Version: 2026.04.25 (Milestone 4)
+
+This script manages the end-to-end inference workflow for 2D spine X-rays, including:
+1. Adaptive Resolution Scaling (Standardizing to 1024px)
+2. GPU-Accelerated nnU-Net Prediction
+3. Automated Post-processing and Resolution Restoration
+"""
+
 import argparse
 import os
 import shutil
@@ -38,29 +48,54 @@ def staged_case_id(path: Path) -> str:
     return case_id
 
 
-def stage_single_image(input_path: Path, output_path: Path) -> None:
+def calculate_scale(width: int, height: int, target_size: int) -> float:
+    return float(target_size) / max(width, height)
+
+
+def stage_single_image(input_path: Path, output_path: Path, target_size: int | None = None) -> tuple[int, int]:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with Image.open(input_path) as image:
-        image.convert("L").save(output_path)
+    try:
+        with Image.open(input_path) as image:
+            orig_width, orig_height = image.size
+            if target_size is not None:
+                scale = calculate_scale(orig_width, orig_height, target_size)
+                if scale < 1.0:
+                    new_width = int(round(orig_width * scale))
+                    new_height = int(round(orig_height * scale))
+                    image = image.resize((new_width, new_height), resample=Image.Resampling.LANCZOS)
+            image.convert("L").save(output_path)
+            return orig_width, orig_height
+    except Exception as e:
+        print(f"❌ ERROR: Failed to process image {input_path}. Details: {e}")
+        return 0, 0
 
 
-def stage_input_images(input_path: Path, staged_dir: Path, overwrite: bool = False) -> dict[str, Path]:
+def stage_input_images(input_path: Path, staged_dir: Path, target_size: int | None = None, overwrite: bool = False) -> tuple[dict[str, Path], dict[str, tuple[int, int]]]:
     if input_path.is_file():
         case_id = staged_case_id(input_path)
         staged_path = staged_dir / f"{case_id}_0000.png"
+        shape = (0, 0)
         if overwrite or not staged_path.exists():
-            stage_single_image(input_path, staged_path)
-        return {case_id: staged_path}
+            shape = stage_single_image(input_path, staged_path, target_size=target_size)
+        else:
+            with Image.open(input_path) as image:
+                shape = image.size
+        return {case_id: staged_path}, {case_id: shape}
 
     source_images = collect_case_files(input_path, SUPPORTED_IMAGE_SUFFIXES)
     staged = {}
+    shapes = {}
     for _, source_path in sorted(source_images.items()):
         case_id = staged_case_id(source_path)
         staged_path = staged_dir / f"{case_id}_0000.png"
         if overwrite or not staged_path.exists():
-            stage_single_image(source_path, staged_path)
+            shape = stage_single_image(source_path, staged_path, target_size=target_size)
+        else:
+            with Image.open(source_path) as image:
+                shape = image.size
         staged[case_id] = staged_path
-    return staged
+        shapes[case_id] = shape
+    return staged, shapes
 
 
 def copy_raw_predictions(raw_predictions_dir: Path, output_dir: Path, overwrite: bool = False) -> dict[str, Path]:
@@ -131,6 +166,7 @@ def run_xray_inference(
     device: str = "cpu",
     checkpoint: str = "checkpoint_final.pth",
     raw_predictions_dir: Path | None = None,
+    target_size: int | None = 1024,
     min_area: int = 64,
     max_components: int | None = None,
     max_components_per_label: int | None = 1,
@@ -143,11 +179,22 @@ def run_xray_inference(
     if folds is None:
         folds = ["0"]
 
+    # Pre-flight check: Verify weights exist if not using raw_predictions_dir
+    if raw_predictions_dir is None:
+        dirs = repo_nnunet_dirs()
+        weights_dir = Path(dirs["nnUNet_results"]) / f"Dataset{dataset_id:03d}_TotalSpineSeg_XRay_FullSpine_AP_Lat" / f"{trainer}__{plans}__{configuration}"
+        if not weights_dir.exists():
+            print(f"\n⚠️  WARNING: Could not find weights at {weights_dir}")
+            print(f"Please ensure the 'nnUNet_results' environment variable is set correctly.")
+            print(f"Current search path: {dirs['nnUNet_results']}\n")
+            # We don't raise error here yet as user might have a different naming convention, 
+            # but we warn them.
+
     output_path.mkdir(parents=True, exist_ok=True)
     staged_input_dir = output_path / "input"
     raw_output_dir = output_path / "raw"
 
-    staged_inputs = stage_input_images(input_path, staged_input_dir, overwrite=overwrite)
+    staged_inputs, staged_shapes = stage_input_images(input_path, staged_input_dir, target_size=target_size, overwrite=overwrite)
 
     if raw_predictions_dir is not None:
         copy_raw_predictions(raw_predictions_dir, raw_output_dir, overwrite=overwrite)
@@ -169,6 +216,7 @@ def run_xray_inference(
         output_dir=output_path,
         image_dir=staged_input_dir,
         image_suffix="_0000",
+        staged_shapes=staged_shapes,
         min_area=min_area,
         max_components=max_components,
         max_components_per_label=max_components_per_label,
@@ -187,6 +235,8 @@ def run_xray_inference(
         "device": device,
         "checkpoint": checkpoint,
         "num_inputs": len(staged_inputs),
+        "target_size": target_size,
+        "staged_shapes": {k: list(v) for k, v in staged_shapes.items()},
         "used_raw_predictions_dir": None if raw_predictions_dir is None else str(raw_predictions_dir),
         "prediction_mode": prediction_mode,
         "ordered_label_values": ordered_label_values,
@@ -227,6 +277,12 @@ def main():
         type=Path,
         default=None,
         help="Skip nnU-Net prediction and use an existing folder of raw predicted masks.",
+    )
+    parser.add_argument(
+        "--target-size",
+        type=int,
+        default=1024,
+        help="Standardize input image long-edge to this size (adaptive scaling). Set to 0 to disable.",
     )
     parser.add_argument("--min-area", type=int, default=64, help="Minimum area for connected vertebra components.")
     parser.add_argument("--max-components", type=int, default=None, help="Optional cap on kept components in binary mode.")

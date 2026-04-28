@@ -1,9 +1,22 @@
+"""
+TotalSpineSeg X-Ray: Production Post-processing Engine
+Version: 2026.04.25 (Milestone 4)
+
+This script implements clinical post-processing for spine X-ray masks, including:
+1. Nearest-Neighbor Rescaling for Resolution Restoration
+2. Connected Component Extraction for Vertebrae
+3. Automated Superior-to-Inferior Label Assignment (Anatomical Numbering)
+4. Overlay Generation for Clinical Review
+"""
+
 import argparse
 import textwrap
 from pathlib import Path
 
 import numpy as np
 import scipy.ndimage as ndi
+from skimage.segmentation import watershed
+from skimage.feature import peak_local_max
 
 from .common import (
     SUPPORTED_IMAGE_SUFFIXES,
@@ -14,6 +27,7 @@ from .common import (
     save_overlay_preview,
     write_json,
 )
+from PIL import Image
 from .labels import (
     align_ordered_label_values,
     label_name_map,
@@ -31,6 +45,27 @@ def component_bbox(component_mask: np.ndarray) -> list[int]:
     ]
 
 
+def apply_watershed_separation(mask: np.ndarray, min_distance: int = 40) -> np.ndarray:
+    """
+    Separates merged vertebrae components using distance transform and watershed.
+    """
+    if not mask.any():
+        return mask
+    
+    # 1. Distance transform: how far is each pixel from the background?
+    distance = ndi.distance_transform_edt(mask)
+    
+    # 2. Find local maxima (peaks): these are our vertebra centers
+    coords = peak_local_max(distance, min_distance=min_distance, labels=mask)
+    mask_peaks = np.zeros(distance.shape, dtype=bool)
+    mask_peaks[tuple(coords.T)] = True
+    markers, _ = ndi.label(mask_peaks)
+    
+    # 3. Apply watershed to separate components based on the peaks
+    labels = watershed(-distance, markers, mask=mask)
+    return labels
+
+
 def extract_component_entries(
     binary_mask: np.ndarray,
     min_area: int,
@@ -42,10 +77,13 @@ def extract_component_entries(
     if fill_holes:
         binary_mask = ndi.binary_fill_holes(binary_mask)
 
-    labeled, num_components = ndi.label(binary_mask)
+    # Apply Watershed separation to solve "Thoracic Blob" merging issues
+    separated_labels = apply_watershed_separation(binary_mask)
+    num_components = int(separated_labels.max())
+    
     entries = []
     for component_id in range(1, num_components + 1):
-        component_mask = labeled == component_id
+        component_mask = separated_labels == component_id
         area = int(component_mask.sum())
         if area < min_area:
             continue
@@ -253,6 +291,7 @@ def postprocess_folder(
     input_dir: Path,
     output_dir: Path,
     image_dir: Path | None = None,
+    staged_shapes: dict[str, tuple[int, int]] | None = None,
     prediction_suffix: str = "",
     image_suffix: str = "",
     file_ending: str = ".png",
@@ -296,6 +335,16 @@ def postprocess_folder(
             continue
 
         prediction = load_label_image(prediction_path)
+
+        # Rescale if needed
+        if staged_shapes and case_id in staged_shapes:
+            target_width, target_height = staged_shapes[case_id]
+            if (target_height, target_width) != prediction.shape:
+                pred_image = Image.fromarray(prediction)
+                # Resampling to nearest neighbor is critical for label maps
+                pred_image = pred_image.resize((target_width, target_height), resample=Image.Resampling.NEAREST)
+                prediction = np.asarray(pred_image)
+
         cleaned_binary, ordered, labeled, summary = postprocess_prediction(
             prediction=prediction,
             min_area=min_area,
@@ -318,7 +367,21 @@ def postprocess_folder(
 
         if images is not None:
             overlay_mask = labeled if labeled.any() else ordered
-            save_overlay_preview(images[case_id], overlay_mask, preview_path)
+            annotations = []
+            for comp in summary["components"]:
+                text = comp.get("label_name")
+                if not text:
+                     # Fallback to ordered label if no anatomical name is assigned
+                     text = str(comp.get("ordered_label", ""))
+                
+                if text:
+                    annotations.append(
+                        {
+                            "text": text,
+                            "centroid": (comp["centroid_y"], comp["centroid_x"]),
+                        }
+                    )
+            save_overlay_preview(images[case_id], overlay_mask, preview_path, annotations=annotations)
 
         case_summaries.append(summary)
 
@@ -353,6 +416,12 @@ def main():
     parser.add_argument("input_dir", type=Path, help="Folder containing raw predicted label masks.")
     parser.add_argument("output_dir", type=Path, help="Folder where processed outputs will be written.")
     parser.add_argument("--image-dir", type=Path, default=None, help="Optional folder with source X-ray images.")
+    parser.add_argument(
+        "--staged-shapes-json",
+        type=Path,
+        default=None,
+        help="Optional JSON file mapping case ids to original (width, height) shapes for adaptive rescaling.",
+    )
     parser.add_argument("--prediction-suffix", default="", help="Suffix stripped from prediction stems.")
     parser.add_argument("--image-suffix", default="", help="Suffix stripped from image stems.")
     parser.add_argument("--file-ending", choices=[".png", ".bmp", ".tif"], default=".png")
@@ -400,10 +469,20 @@ def main():
     if args.ordered_labels:
         ordered_label_values = ordered_label_values_from_spec(args.ordered_labels, args.label_map_json)
 
+    staged_shapes = None
+    if args.staged_shapes_json:
+        with open(args.staged_shapes_json, "r") as f:
+            raw_shapes = json.load(f)
+            # Handle manifest format if provided
+            if "staged_shapes" in raw_shapes:
+                raw_shapes = raw_shapes["staged_shapes"]
+            staged_shapes = {k: tuple(v) for k, v in raw_shapes.items()}
+
     postprocess_folder(
         input_dir=args.input_dir,
         output_dir=args.output_dir,
         image_dir=args.image_dir,
+        staged_shapes=staged_shapes,
         prediction_suffix=args.prediction_suffix,
         image_suffix=args.image_suffix,
         file_ending=args.file_ending,

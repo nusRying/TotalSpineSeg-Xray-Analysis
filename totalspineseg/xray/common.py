@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import nibabel as nib
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".jpg", ".jpeg", ".nii.gz"}
@@ -75,14 +75,35 @@ def load_label_image(path: Path) -> np.ndarray:
     return array
 
 
+def get_pascal_voc_palette() -> list[int]:
+    """Generates a standard distinct color palette for label masks."""
+    palette = [0, 0, 0]  # Background is black
+    for j in range(1, 256):
+        lab = j
+        r, g, b = 0, 0, 0
+        i = 0
+        while lab > 0:
+            r |= ((lab >> 0) & 1) << (7 - i)
+            g |= ((lab >> 1) & 1) << (7 - i)
+            b |= ((lab >> 2) & 1) << (7 - i)
+            i += 1
+            lab >>= 3
+        palette.extend([r, g, b])
+    return palette
+
+
 def save_label_image(array: np.ndarray, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if str(path).lower().endswith(".nii.gz"):
         nib.save(nib.Nifti1Image(array.astype(np.int32), np.eye(4)), str(path))
         return
+    
+    # Apply color palette to PNG/BMP to fix visibility of low-integer labels
     max_value = int(array.max()) if array.size else 0
-    dtype = np.uint8 if max_value < 256 else np.uint16
-    Image.fromarray(array.astype(dtype, copy=False)).save(path)
+    # Create PIL image in 'P' (Palette) mode
+    img = Image.fromarray(array.astype(np.uint8, copy=False), mode="P")
+    img.putpalette(get_pascal_voc_palette())
+    img.save(path)
 
 
 def normalize_preview_image(image: np.ndarray) -> np.ndarray:
@@ -107,17 +128,68 @@ def colorize_ordered_mask(mask: np.ndarray) -> np.ndarray:
     return color
 
 
-def save_overlay_preview(image_path: Path, ordered_mask: np.ndarray, output_path: Path, alpha: float = 0.45) -> None:
+def save_overlay_preview(
+    image_path: Path,
+    ordered_mask: np.ndarray,
+    output_path: Path,
+    alpha: float = 0.45,
+    annotations: list[dict] | None = None,
+) -> None:
+    """
+    Saves a clinical preview overlay.
+    
+    Args:
+        image_path: Path to the source X-ray image.
+        ordered_mask: The label mask to overlay.
+        output_path: Path where the preview will be saved.
+        alpha: Transparency of the mask overlay.
+        annotations: List of dicts with {"text": str, "centroid": (y, x)} for text labels.
+    """
     base = normalize_preview_image(load_grayscale_image(image_path))
     rgb = np.repeat(base[..., None], 3, axis=2)
     color = colorize_ordered_mask(ordered_mask)
     positive = ordered_mask > 0
-    overlay = rgb.copy()
-    overlay[positive] = (
+    overlay_array = rgb.copy()
+    overlay_array[positive] = (
         (1.0 - alpha) * rgb[positive].astype(np.float32) + alpha * color[positive].astype(np.float32)
     ).astype(np.uint8)
+    
+    img = Image.fromarray(overlay_array)
+    
+    if annotations:
+        draw = ImageDraw.Draw(img)
+        # Try to load a professional font, fall back to default
+        try:
+            # Scale font size relative to image height (approx 3% of height)
+            font_size = max(20, int(img.height * 0.03))
+            font = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", font_size)
+        except Exception:
+            font = ImageFont.load_default()
+
+        for ann in annotations:
+            text = str(ann["text"])
+            y, x = ann["centroid"]
+            
+            # Use anchor='mm' (middle-middle) for perfect centering if supported, 
+            # otherwise calculate bounding box
+            try:
+                # High-contrast style: White text with professional black outline
+                draw.text(
+                    (x, y), 
+                    text, 
+                    fill=(255, 255, 255), 
+                    font=font, 
+                    anchor="mm",
+                    stroke_width=2,
+                    stroke_fill=(0, 0, 0)
+                )
+            except Exception:
+                # Fallback for older PIL versions
+                w, h = draw.textsize(text, font=font)
+                draw.text((x - w/2, y - h/2), text, fill=(255, 255, 255), font=font)
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(overlay).save(output_path)
+    img.save(output_path)
 
 
 def write_json(data: dict, path: Path) -> None:
