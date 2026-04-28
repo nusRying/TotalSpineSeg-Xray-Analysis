@@ -93,10 +93,23 @@ python3 scripts/prepare_xray_dataset.py \
   --labels-dir "$TOTALSPINESEG_DATA/xray/masks" \
   --output-root "$nnUNet_raw" --dataset-id 202
 
-# 4.2 Start training in a persistent tmux session
-tmux new -s spine_training
-bash scripts/train_xray.sh 202 0
-# Detach with: Ctrl+B then D
+## PHASE 5: Launch Training (Resume Mode)
+
+To save time and achieve 96%+ accuracy faster, we recommend initializing the training with the Milestone 4 weights.
+
+1.  **Manual Upload:** Upload the `weights/` folder from the Milestone 4 backup to the server.
+2.  **Start Training:** Use the `-pretrained_weights` flag.
+
+```bash
+# Inside tmux
+cd ~/TotalSpineSeg-Xray-Analysis
+
+# 5.1 Plan and Preprocess
+nnUNetv2_plan_and_preprocess -d 202 -c 2d
+
+# 5.2 Start Training (Pretrained Mode)
+# Replace /path/to/checkpoint_final.pth with the actual uploaded path
+nnUNetv2_train 202 2d 0 -pretrained_weights /path/to/checkpoint_final.pth
 ```
 
 ---
