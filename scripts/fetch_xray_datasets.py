@@ -59,8 +59,24 @@ def main():
         else:
             print(f"[+] {name} already exists. Skipping download.")
     
-    # 4. Auto-Extraction
-    print("\n--- PHASE 3: Extraction & Organization ---")
+    # 4. Download AASCE (MICCAI 2019) From Kaggle
+    print("\n--- PHASE 3: AASCE 2019 (Scoliosis AP: ~1GB) ---")
+    try:
+        import kagglehub
+        # Downloads to ~/.cache/kagglehub/datasets/vamsidharreddy/aasce-miccai-2019/
+        aasce_path = kagglehub.dataset_download("vamsidharreddy/aasce-miccai-2019")
+        print(f"[*] AASCE downloaded to: {aasce_path}")
+        # Symlink or move it to our target dir
+        target_aasce = os.path.join(base_raw, "AASCE_2019")
+        if not os.path.exists(target_aasce):
+            # Use os.symlink for cleaner structure if on Linux (server)
+            run_cmd(f'ln -s "{aasce_path}" "{target_aasce}"')
+    except Exception as e:
+        print(f"[!] Kaggle download failed: {e}")
+        print("[!] Manual download required for AASCE if not in cache.")
+
+    # 5. Auto-Extraction
+    print("\n--- PHASE 4: Extraction & Organization ---")
     
     # CSXA Extraction
     img_zip = os.path.join(paths["csxa"], "images.zip")
@@ -76,6 +92,7 @@ def main():
     print("="*50)
     print(f"VinDr Path: {paths['vindr']}")
     print(f"CSXA Path:  {paths['csxa']}")
+    print(f"AASCE Path: {os.path.join(base_raw, 'AASCE_2019')}")
     print("\nNext Action: Run 'scripts/xray_landmarks_to_mask.py' to generate ground truth.")
     print("="*50)
 
