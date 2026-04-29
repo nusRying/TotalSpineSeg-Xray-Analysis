@@ -1,0 +1,2 @@
+AccessDeniedException: 403 engr.umairejaz@gmail.com does not have storage.objects.list access to the Google Cloud Storage bucket. Permission 'storage.objects.list' denied on resource (or it may not exist).
+CommandException: 1 file/object could not be transferred.

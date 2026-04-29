@@ -1,0 +1,30 @@
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         0.5sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         1.0sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         1.5sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.0s
+2026-04-29 07:59:29 ERROR : https://physionet.org/files/vindr-spinexr/1.0.0/: error reading source root directory: error listing "": failed to readDir: HTTP Error: 403 Forbidden
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.4s
+2026-04-29 07:59:29 ERROR : Attempt 1/3 failed with 1 errors and: error listing "": failed to readDir: HTTP Error: 403 Forbidden
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         2.4sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.5s
+2026-04-29 07:59:30 ERROR : https://physionet.org/files/vindr-spinexr/1.0.0/: error reading source root directory: error listing "": failed to readDir: HTTP Error: 403 Forbidden
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.6s
+2026-04-29 07:59:30 ERROR : Attempt 2/3 failed with 1 errors and: error listing "": failed to readDir: HTTP Error: 403 Forbidden
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         2.6s
+2026-04-29 07:59:30 ERROR : https://physionet.org/files/vindr-spinexr/1.0.0/: error reading source root directory: error listing "": failed to readDir: HTTP Error: 403 Forbidden
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Elapsed time:         2.8s
+2026-04-29 07:59:30 ERROR : Attempt 3/3 failed with 1 errors and: error listing "": failed to readDir: HTTP Error: 403 Forbidden
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         2.8sTransferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Errors:                 1 (retrying may help)
+Elapsed time:         2.8s
+2026/04/29 07:59:30 Failed to copy: error listing "": failed to readDir: HTTP Error: 403 Forbidden

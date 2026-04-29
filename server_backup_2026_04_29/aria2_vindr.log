@@ -1,0 +1,19 @@
+
+04/29 08:30:06 [[1;32mNOTICE[0m] Downloading 1 item(s)
+
+04/29 08:30:06 [[1;31mERROR[0m] CUID#7 - Download aborted. URI=https://physionet.org/content/vindr-spinexr/get-zip/1.0.0/
+Exception: [AbstractCommand.cc:351] errorCode=22 URI=https://physionet.org/content/vindr-spinexr/get-zip/1.0.0/
+  -> [HttpSkipResponseCommand.cc:239] errorCode=22 The response status is not successful. status=403
+
+04/29 08:30:06 [[1;32mNOTICE[0m] Download GID#92057d861fa0de73 not complete: /workspace/data/vindr_spinexr.zip
+
+Download Results:
+gid   |stat|avg speed  |path/URI
+======+====+===========+=======================================================
+92057d|ERR |       0B/s|/workspace/data/vindr_spinexr.zip
+
+Status Legend:
+(ERR):error occurred.
+
+aria2 will resume download if the transfer is restarted.
+If there are any errors, then see the log file. See '-l' option in help/man page for details.

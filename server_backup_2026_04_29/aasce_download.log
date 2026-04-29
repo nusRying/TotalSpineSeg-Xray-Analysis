@@ -1,0 +1,27 @@
+[*] Initializing workspace in /workspace/data...
+
+[!] Skipping VinDr-SpineXR as requested.
+
+--- PHASE 2: CSXA V3.0 (Cervical Lateral: ~3GB) ---
+[+] images.zip already exists. Skipping download.
+[+] labels.zip already exists. Skipping download.
+
+--- PHASE 3: AASCE 2019 (Scoliosis AP: ~1GB) ---
+[!] Kaggle download failed: 403 Client Error.
+
+You don't have permission to access resource at URL: https://api.kaggle.com/v1/datasets.DatasetApiService/GetDataset. Please make sure you are authenticated if you are trying to access a private resource or a resource requiring consent.
+[!] Manual download required for AASCE if not in cache.
+
+--- PHASE 4: Extraction & Organization ---
+>> Executing: unzip -qo "/workspace/data/raw_external/CSXA_V3/images.zip" -d "/workspace/data/raw_external/CSXA_V3/images"
+>> Executing: unzip -qo "/workspace/data/raw_external/CSXA_V3/labels.zip" -d "/workspace/data/raw_external/CSXA_V3/annotations"
+
+==================================================
+✅ DATASET FETCH COMPLETE
+==================================================
+VinDr Path: /workspace/data/raw_external/VinDr_SpineXR
+CSXA Path:  /workspace/data/raw_external/CSXA_V3
+AASCE Path: /workspace/data/raw_external/AASCE_2019
+
+Next Action: Run 'scripts/xray_landmarks_to_mask.py' to generate ground truth.
+==================================================

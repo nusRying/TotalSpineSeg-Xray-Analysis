@@ -1,0 +1,16 @@
+
+04/29 09:32:32 [[1;32mNOTICE[0m] Downloading 1 item(s)
+
+04/29 09:32:32 [[1;32mNOTICE[0m] Allocating disk space. Use --file-allocation=none to disable it. See --file-allocation option in man page for more details.
+[#2269ac 1.2MiB/81MiB(1%) CN:4 DL:3.0MiB ETA:26s]
+[#2269ac 68MiB/81MiB(84%) CN:2 DL:48MiB]
+
+04/29 09:32:34 [[1;32mNOTICE[0m] Download complete: /workspace/data/raw_external//mendeley_scoliosis.zip
+
+Download Results:
+gid   |stat|avg speed  |path/URI
+======+====+===========+=======================================================
+2269ac|OK  |    45MiB/s|/workspace/data/raw_external//mendeley_scoliosis.zip
+
+Status Legend:
+(OK):download completed.

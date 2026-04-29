@@ -1,0 +1,2 @@
+BucketNotFoundException: 404 gs://vindr-spinexr-1.0.0.physionet.org bucket does not exist.
+CommandException: 1 file/object could not be transferred.

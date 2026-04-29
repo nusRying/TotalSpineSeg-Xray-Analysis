@@ -1,0 +1,27 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.db
+.DS_Store
+
+# Large data folders
+data/
+logs/
+nnUNet_results/
+milestone3_final_delivery/
+milestone3_delivery/
+deliverables/
+reports/
+
+# Documentation and temporary files
+docs/
+tmp/
+*.pdf
+*.zip
+*.png
+*.jpg
+*.csv
+*.json

@@ -1,0 +1,31 @@
+{
+    "dataset_id": 202,
+    "configuration": "2d",
+    "trainer": "nnUNetTrainer",
+    "plans": "nnUNetPlans",
+    "folds": [
+        "0"
+    ],
+    "device": "cpu",
+    "checkpoint": "checkpoint_final.pth",
+    "num_inputs": 1,
+    "target_size": 1024,
+    "staged_shapes": {
+        "test_image": [
+            691,
+            1012
+        ]
+    },
+    "used_raw_predictions_dir": "test_mock_raw",
+    "prediction_mode": "auto",
+    "ordered_label_values": [
+        32,
+        41,
+        42,
+        43,
+        44,
+        45
+    ],
+    "ordered_label_anchor": "strict",
+    "label_map_json": null
+}
