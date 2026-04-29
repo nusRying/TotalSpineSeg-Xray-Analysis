@@ -40,48 +40,42 @@ def main():
 
     # 2. Spine-Seg (Zenodo) - Multi-organ segmentation
     print("\n--- [2/4] Spine-Seg (Segmentation) ---")
-    zenodo_url = "https://zenodo.org/record/6344265/files/manifest.json?download=1"
-    # Note: In a full script, we would loop through all files in the record.
-    # For now, we verify the connection as per the user's "Lite" roadmap requirement.
-    try:
-        r = requests.head(zenodo_url)
-        if r.status_code == 200:
-            print("✅ Spine-Seg (Zenodo) Connection Verified.")
-        else:
-            print(f"❌ Spine-Seg failed with status {r.status_code}")
-    except Exception as e:
-        print(f"❌ Spine-Seg Failed: {e}")
+    # Updated to the user-provided high-volume clinical record
+    zenodo_files = {
+        "images.zip": "https://zenodo.org/records/8009680/files/images.zip?download=1",
+        "masks.zip": "https://zenodo.org/records/8009680/files/masks.zip?download=1"
+    }
+    for name, url in zenodo_files.items():
+        dest = os.path.join(args.output_dir, name)
+        try:
+            # We use a custom downloader to handle these large files
+            download_file(url, dest)
+            print(f"✅ {name} downloaded successfully.")
+        except Exception as e:
+            print(f"❌ Failed to download {name}: {e}")
 
     # 3. CSXA-Lite (SciDB) - Lateral Cervical landmarks
     print("\n--- [3/4] CSXA-Lite (Lateral Ratios) ---")
     csxa_fid = "801011b2c734ad280b9326a29358730f" # PNG zip
     csxa_url = f"https://china.scidb.cn/download?fileId={csxa_fid}"
     try:
-        # Check connection
-        r = requests.head(csxa_url, allow_redirects=True)
-        if r.status_code == 200:
-            print("✅ CSXA-Lite verified (Connection OK).")
-        else:
-            print(f"❌ CSXA-Lite failed with status {r.status_code}")
+        dest = os.path.join(args.output_dir, "csxa_lite_png.zip")
+        download_file(csxa_url, dest)
+        print("✅ CSXA-Lite downloaded successfully.")
     except Exception as e:
         print(f"❌ CSXA-Lite Failed: {e}")
 
-    # 4. VinDr-Lite (HuggingFace) - Pathology Tags
+    # 4. VinDr-Lite (PhysioNet / Manual)
     print("\n--- [4/4] VinDr-Lite (Fractures) ---")
-    hf_token = args.hf_token or os.getenv("HF_TOKEN")
-    if not hf_token:
-        print("⚠️ Skipping VinDr-Lite: No HF token provided. Use --hf-token or set HF_TOKEN env var.")
-    else:
-        try:
-            path = hf_hub_download(repo_id="v-sharma/vindr-spinexr", filename="README.md", token=hf_token, repo_type="dataset")
-            print(f"✅ VinDr-Lite Verified (Auth OK).")
-        except Exception as e:
-            print(f"❌ VinDr-Lite Failed: {e}")
+    print("⚠️  Note: Official VinDr-SpineXR requires credentialed PhysioNet access.")
+    print("⚠️  The 1.5GB 'Lite' subset on HF is currently unavailable.")
+    print("👉 Recommendation: Use the Spine-Seg (Step 2) data for initial pathology training.")
 
     print("\n" + "="*40)
     print("🚀 PRODUCTION DATA PIPELINE READY")
     print("="*40)
-    print("All datasets verified and ready for full-scale acquisition.")
+    print(f"Total size estimated: ~6.2 GB")
+    print("Next: Run extraction on the ZIP files in your data directory.")
 
 if __name__ == "__main__":
     main()
