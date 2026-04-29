@@ -19,6 +19,8 @@ def main():
     parser.add_argument("--output-dir", required=True, help="Base directory to store datasets (e.g., ./data)")
     parser.add_argument("--user", required=True, help="PhysioNet Username for VinDr-SpineXR")
     parser.add_argument("--password", required=True, help="PhysioNet Password for VinDr-SpineXR")
+    parser.add_argument("--scidb-user", help="SciDB Email (optional if open)")
+    parser.add_argument("--scidb-pass", help="SciDB Password (optional if open)")
     parser.add_argument("--skip-vindr", action="store_true", help="Skip the 36GB VinDr download")
     args = parser.parse_args()
 
@@ -55,7 +57,12 @@ def main():
         dest = os.path.join(paths["csxa"], name)
         if not os.path.exists(dest):
             print(f"[*] Downloading {name}...")
-            run_cmd(f'wget -c -O "{dest}" "{url}"')
+            # If SciDB credentials are provided, try to use them (basic auth support)
+            auth_str = ""
+            if args.scidb_user and args.scidb_pass:
+                auth_str = f'--user {args.scidb_user} --password "{args.scidb_pass}" '
+            
+            run_cmd(f'wget -c {auth_str}-O "{dest}" "{url}"')
         else:
             print(f"[+] {name} already exists. Skipping download.")
     
