@@ -33,11 +33,12 @@ docker run --gpus all \
     totalspineseg-milestone4 /images /output --device cuda
 ```
 
-### **B. Performing Landmark Numbering**
-To automatically label vertebrae (e.g., C1-L5), use the `--ordered-labels` flag:
-```bash
-totalspineseg_xray_inference images out --ordered-labels "C1-L5"
-```
+### **C. Diagnostic Geometry Engines**
+The pipeline now includes post-processing engines to translate masks into clinical metrics:
+*   **Cobb Angle Engine:** Automatically detects the most tilted vertebrae to calculate scoliosis severity.
+    *   `python scripts/geometry/cobb_angle_engine.py`
+*   **Vertebral Height Ratio (VHR) Engine:** Analyzes lateral views for wedge fracture detection (anterior/posterior height ratio).
+    *   `python scripts/geometry/height_ratio_engine.py`
 
 ## **4. Technical Architecture**
 *   **Backend:** 2D nnU-Net v2
