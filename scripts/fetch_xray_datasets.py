@@ -39,8 +39,8 @@ def main():
     if not args.skip_vindr:
         print("\n--- PHASE 1: VinDr-SpineXR (Large Download: ~36GB) ---")
         # -r: recursive, -N: only get newer, -c: continue/resume, -np: no-parent
-        # We use -nH and --cut-dirs to avoid deep nested folders from PhysioNet URL
-        run_cmd(f'wget -r -N -c -np -nH --cut-dirs=4 '
+        # --reject "index.html*" avoids downloading the directory listing files
+        run_cmd(f'wget -r -N -c -np -nH --cut-dirs=4 --reject "index.html*" '
                 f'--user {args.user} --password "{args.password}" '
                 f'-P {paths["vindr"]} https://physionet.org/files/vindr-spinexr/1.0.0/')
     else:
