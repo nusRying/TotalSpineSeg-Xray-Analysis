@@ -273,29 +273,20 @@ def main():
 
     if args.label_map_json is not None:
         label_names = json.loads(args.label_map_json.read_text(encoding="utf-8"))
-        # Ensure all existing labels are in the map
-        for val in train_label_values:
-            if str(val) not in label_names and val != 0:
-                label_names[str(val)] = f"label_{val}"
+        # Ensure background is included
+        if "background" not in label_names and 0 not in label_names.values():
+            label_names = {"background": 0, **label_names}
     else:
-        label_names = {"background": 0}
-        if args.binarize_labels:
-            label_names[args.foreground_label_name] = 1
-        else:
-            for val in sorted(train_label_values):
-                if val == 0:
-                    continue
-                label_names[infer_named_labels(val)] = int(val)
-
-    # Invert the map for nnU-Net format: { "name": index }
-    final_labels = {name: index for name, index in label_names.items()}
-    if "background" not in final_labels and 0 not in final_labels.values():
-         final_labels = {"background": 0, **final_labels}
+        label_names = infer_named_labels(
+            train_label_values, 
+            args.foreground_label_name, 
+            args.label_map_json
+        )
 
     write_dataset_json(
         dataset_dir,
         args.channel_name,
-        final_labels,
+        label_names,
         len(train_ids),
         args.file_ending,
         args.dataset_name,
