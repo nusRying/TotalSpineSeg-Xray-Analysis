@@ -5,6 +5,7 @@ import shutil
 import sys
 import textwrap
 from pathlib import Path
+from multiprocessing import Pool
 
 import numpy as np
 from PIL import Image
@@ -23,9 +24,10 @@ SUPPORTED_LABEL_SUFFIXES = {".png", ".bmp", ".tif", ".tiff"}
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Convert 2D spine X-ray images and masks into an nnU-Net v2 raw dataset.",
-        epilog=textwrap.dedent(
-            """\
+        description=textwrap.dedent(
+            """
+            Prepare a TotalSpineSeg X-ray dataset for nnU-Net v2.
+            
             Example:
               python scripts/prepare_xray_dataset.py ^
                 --images-dir data/xray/images ^
@@ -103,14 +105,19 @@ def parse_args():
         "--skip-test-labels",
         action="store_true",
         default=False,
-        help="Do not copy test labels into labelsTs.",
+        help="Do not copy test labels to labelsTs.",
     )
     parser.add_argument(
         "--overwrite",
-        "-r",
         action="store_true",
         default=False,
-        help="Overwrite output files if they already exist.",
+        help="Overwrite existing files in the output directory.",
+    )
+    parser.add_argument(
+        "--num-processes",
+        type=int,
+        default=8,
+        help="Number of background processes to use for conversion.",
     )
     return parser.parse_args()
 
@@ -139,24 +146,15 @@ def collect_files(folder: Path, suffix_to_strip: str, allowed_suffixes: set[str]
 
 
 def load_explicit_split(split_json: Path) -> tuple[list[str], list[str]]:
-    content = json.loads(split_json.read_text(encoding="utf-8"))
-    train_ids = content.get("train") or content.get("training")
-    test_ids = content.get("test") or content.get("testing")
-    if not train_ids or test_ids is None:
-        raise ValueError("split-json must contain train/training and test/testing lists.")
-    return [str(case_id) for case_id in train_ids], [str(case_id) for case_id in test_ids]
+    data = json.loads(split_json.read_text(encoding="utf-8"))
+    return data["train"], data["test"]
 
 
 def make_split(case_ids: list[str], test_size: float, seed: int) -> tuple[list[str], list[str]]:
-    if not 0 < test_size < 1:
-        raise ValueError("test-size must be between 0 and 1.")
-    if len(case_ids) < 2:
-        raise ValueError("At least two matched cases are required to create a train/test split.")
-
-    shuffled = case_ids[:]
-    random.Random(seed).shuffle(shuffled)
-    num_test = max(1, int(round(len(shuffled) * test_size)))
-    num_test = min(num_test, len(shuffled) - 1)
+    random.seed(seed)
+    shuffled = list(case_ids)
+    random.shuffle(shuffled)
+    num_test = int(len(shuffled) * test_size)
     test_ids = sorted(shuffled[:num_test])
     train_ids = sorted(shuffled[num_test:])
     return train_ids, test_ids
@@ -178,18 +176,17 @@ def save_label(input_path: Path, output_path: Path, overwrite: bool, binarize: b
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(input_path) as image:
         label_array = np.asarray(image)
+        if binarize:
+            label_array = (label_array > 0).astype(np.uint8)
+        Image.fromarray(label_array).save(output_path)
+        return set(np.unique(label_array).tolist())
 
-    if label_array.ndim != 2:
-        raise ValueError(f"Labels must be single-channel integer masks. Problem file: {input_path}")
 
-    if binarize:
-        label_array = (label_array > 0).astype(np.uint8)
-    else:
-        if not np.issubdtype(label_array.dtype, np.integer):
-            raise ValueError(f"Labels must be integer-valued. Problem file: {input_path}")
-
-    Image.fromarray(label_array).save(output_path)
-    return set(np.unique(label_array).tolist())
+def process_case(args_tuple):
+    case_id, input_image, output_image, input_label, output_label, overwrite, binarize = args_tuple
+    save_image(input_image, output_image, overwrite)
+    label_values = save_label(input_label, output_label, overwrite, binarize)
+    return label_values
 
 
 def write_dataset_json(
@@ -242,19 +239,28 @@ def main():
     labels_tr = dataset_dir / "labelsTr"
     labels_ts = dataset_dir / "labelsTs"
 
-    train_label_values: set[int] = set()
-
+    # Prepare tasks for Pool
+    tasks = []
     for case_id in train_ids:
-        save_image(images[case_id], images_tr / f"{case_id}_0000{args.file_ending}", args.overwrite)
-        train_label_values.update(
-            save_label(
-                labels[case_id],
-                labels_tr / f"{case_id}{args.file_ending}",
-                args.overwrite,
-                args.binarize_labels,
-            )
-        )
+        tasks.append((
+            case_id,
+            images[case_id],
+            images_tr / f"{case_id}_0000{args.file_ending}",
+            labels[case_id],
+            labels_tr / f"{case_id}{args.file_ending}",
+            args.overwrite,
+            args.binarize_labels
+        ))
 
+    print(f"Processing {len(train_ids)} training cases using {args.num_processes} processes...")
+    with Pool(args.num_processes) as p:
+        results = p.map(process_case, tasks)
+
+    train_label_values = set()
+    for res in results:
+        train_label_values.update(res)
+
+    print(f"Processing {len(test_ids)} test cases...")
     for case_id in test_ids:
         save_image(images[case_id], images_ts / f"{case_id}_0000{args.file_ending}", args.overwrite)
         if not args.skip_test_labels:
@@ -265,38 +271,38 @@ def main():
                 args.binarize_labels,
             )
 
-    labels_dict = infer_named_labels(
-        train_label_values,
-        foreground_name=args.foreground_label_name,
-        label_map_json=args.label_map_json,
-    )
+    if args.label_map_json is not None:
+        label_names = json.loads(args.label_map_json.read_text(encoding="utf-8"))
+        # Ensure all existing labels are in the map
+        for val in train_label_values:
+            if str(val) not in label_names and val != 0:
+                label_names[str(val)] = f"label_{val}"
+    else:
+        label_names = {"background": 0}
+        if args.binarize_labels:
+            label_names[args.foreground_label_name] = 1
+        else:
+            for val in sorted(train_label_values):
+                if val == 0:
+                    continue
+                label_names[infer_named_labels(val)] = int(val)
+
+    # Invert the map for nnU-Net format: { "name": index }
+    final_labels = {name: index for name, index in label_names.items()}
+    if "background" not in final_labels and 0 not in final_labels.values():
+         final_labels = {"background": 0, **final_labels}
+
     write_dataset_json(
-        dataset_dir=dataset_dir,
-        channel_name=args.channel_name,
-        labels=labels_dict,
-        num_training=len(train_ids),
-        file_ending=args.file_ending,
-        dataset_name=f"Dataset{args.dataset_id:03d}_{args.dataset_name}",
-        reference=args.reference,
-        description=args.description,
+        dataset_dir,
+        args.channel_name,
+        final_labels,
+        len(train_ids),
+        args.file_ending,
+        args.dataset_name,
+        args.reference,
+        args.description,
     )
-
-    split_manifest = {
-        "train": train_ids,
-        "test": test_ids,
-        "file_ending": args.file_ending,
-        "binarize_labels": args.binarize_labels,
-        "label_map_json": None if args.label_map_json is None else str(args.label_map_json),
-    }
-    dataset_dir.joinpath("xray_split.json").write_text(
-        json.dumps(split_manifest, indent=4) + "\n",
-        encoding="utf-8",
-    )
-
-    print(
-        f"Prepared {dataset_dir} with {len(train_ids)} training cases and {len(test_ids)} test cases. "
-        f"Output format: {args.file_ending}"
-    )
+    print(f"✅ Prepared {dataset_dir}")
 
 
 if __name__ == "__main__":
