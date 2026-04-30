@@ -18,7 +18,7 @@ if __package__ in {None, ""}:
 from totalspineseg.xray.labels import label_value_from_token, ordered_label_values_from_spec
 
 
-SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp", ".tif", ".tiff"}
+SUPPORTED_IMAGE_SUFFIXES = {".png", ".bmp", ".tif", ".tiff", ".jpg", ".jpeg"}
 
 
 @dataclass
