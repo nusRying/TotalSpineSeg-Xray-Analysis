@@ -165,7 +165,18 @@ def save_image(input_path: Path, output_path: Path, overwrite: bool) -> None:
         return
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(input_path) as image:
-        image.convert("L").save(output_path)
+        # Convert to Grayscale
+        image = image.convert("L")
+        
+        # Resize to standard 1024px max dimension (preserves aspect ratio)
+        max_dim = 1024
+        w, h = image.size
+        if max(w, h) > max_dim:
+            scale = max_dim / max(w, h)
+            new_size = (int(w * scale), int(h * scale))
+            image = image.resize(new_size, resample=Image.Resampling.LANCZOS)
+            
+        image.save(output_path)
 
 
 def save_label(input_path: Path, output_path: Path, overwrite: bool, binarize: bool) -> set[int]:
@@ -175,6 +186,15 @@ def save_label(input_path: Path, output_path: Path, overwrite: bool, binarize: b
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(input_path) as image:
+        # Resize to standard 1024px max dimension (preserves aspect ratio)
+        max_dim = 1024
+        w, h = image.size
+        if max(w, h) > max_dim:
+            scale = max_dim / max(w, h)
+            new_size = (int(w * scale), int(h * scale))
+            # MUST use NEAREST for labels to prevent interpolation artifacts
+            image = image.resize(new_size, resample=Image.Resampling.NEAREST)
+
         label_array = np.asarray(image)
         if binarize:
             label_array = (label_array > 0).astype(np.uint8)
