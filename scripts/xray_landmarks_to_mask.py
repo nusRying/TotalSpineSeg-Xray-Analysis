@@ -329,9 +329,7 @@ def main():
     missing_images = sorted(case_id for case_id in grouped_annotations if case_id not in image_index)
     if missing_images:
         preview = ", ".join(missing_images[:10])
-        raise FileNotFoundError(
-            f"Missing source images for {len(missing_images)} annotated cases. First cases: {preview}"
-        )
+        print(f"Warning: Missing source images for {len(missing_images)} annotated cases. First cases: {preview}")
 
     written = 0
     for case_id, annotations in grouped_annotations.items():
