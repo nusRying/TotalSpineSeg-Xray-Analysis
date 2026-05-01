@@ -204,9 +204,13 @@ def save_label(input_path: Path, output_path: Path, overwrite: bool, binarize: b
 
 def process_case(args_tuple):
     case_id, input_image, output_image, input_label, output_label, overwrite, binarize = args_tuple
-    save_image(input_image, output_image, overwrite)
-    label_values = save_label(input_label, output_label, overwrite, binarize)
-    return label_values
+    try:
+        save_image(input_image, output_image, overwrite)
+        label_values = save_label(input_label, output_label, overwrite, binarize)
+        return label_values
+    except Exception as e:
+        print(f"\n[!] ERROR in case {case_id}: {e}")
+        return set()
 
 
 def write_dataset_json(
@@ -273,8 +277,9 @@ def main():
         ))
 
     print(f"Processing {len(train_ids)} training cases using {args.num_processes} processes...")
+    from tqdm import tqdm
     with Pool(args.num_processes) as p:
-        results = p.map(process_case, tasks)
+        results = list(tqdm(p.imap(process_case, tasks), total=len(tasks), desc="Processing training data"))
 
     train_label_values = set()
     for res in results:
