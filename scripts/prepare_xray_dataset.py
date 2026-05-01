@@ -179,7 +179,7 @@ def save_image(input_path: Path, output_path: Path, overwrite: bool) -> None:
         image.save(output_path)
 
 
-def save_label(input_path: Path, output_path: Path, overwrite: bool, binarize: bool) -> set[int]:
+def save_label(input_path: Path, output_path: Path, overwrite: bool, binarize: bool, label_remap: dict[int, int] = None) -> set[int]:
     if output_path.exists() and not overwrite:
         with Image.open(output_path) as image:
             return set(np.unique(np.asarray(image)).tolist())
@@ -195,18 +195,25 @@ def save_label(input_path: Path, output_path: Path, overwrite: bool, binarize: b
             # MUST use NEAREST for labels to prevent interpolation artifacts
             image = image.resize(new_size, resample=Image.Resampling.NEAREST)
 
-        label_array = np.asarray(image)
+        label_array = np.asarray(image).copy()
         if binarize:
             label_array = (label_array > 0).astype(np.uint8)
+        elif label_remap:
+            # Efficiently remap labels using a lookup table
+            new_label_array = np.zeros_like(label_array)
+            for old_val, new_val in label_remap.items():
+                new_label_array[label_array == old_val] = new_val
+            label_array = new_label_array
+
         Image.fromarray(label_array).save(output_path)
         return set(np.unique(label_array).tolist())
 
 
 def process_case(args_tuple):
-    case_id, input_image, output_image, input_label, output_label, overwrite, binarize = args_tuple
+    case_id, input_image, output_image, input_label, output_label, overwrite, binarize, label_remap = args_tuple
     try:
         save_image(input_image, output_image, overwrite)
-        label_values = save_label(input_label, output_label, overwrite, binarize)
+        label_values = save_label(input_label, output_label, overwrite, binarize, label_remap)
         return label_values
     except Exception as e:
         print(f"\n[!] ERROR in case {case_id}: {e}")
@@ -264,6 +271,15 @@ def main():
     labels_ts = dataset_dir / "labelsTs"
 
     # Prepare tasks for Pool
+    label_remap = None
+    if args.label_map_json is not None:
+        raw_map = json.loads(args.label_map_json.read_text(encoding="utf-8"))
+        # Create a mapping from Clinical IDs to Consecutive IDs (1, 2, 3...)
+        # Background (0) is always 0.
+        sorted_clinical_ids = sorted([v for v in raw_map.values() if v != 0])
+        label_remap = {cid: i + 1 for i, cid in enumerate(sorted_clinical_ids)}
+        label_remap[0] = 0
+        
     tasks = []
     for case_id in train_ids:
         tasks.append((
@@ -273,7 +289,8 @@ def main():
             labels[case_id],
             labels_tr / f"{case_id}{args.file_ending}",
             args.overwrite,
-            args.binarize_labels
+            args.binarize_labels,
+            label_remap
         ))
 
     print(f"Processing {len(train_ids)} training cases using {args.num_processes} processes...")
@@ -294,13 +311,17 @@ def main():
                 labels_ts / f"{case_id}{args.file_ending}",
                 args.overwrite,
                 args.binarize_labels,
+                label_remap
             )
 
     if args.label_map_json is not None:
-        label_names = json.loads(args.label_map_json.read_text(encoding="utf-8"))
-        # Ensure background is included
-        if "background" not in label_names and 0 not in label_names.values():
-            label_names = {"background": 0, **label_names}
+        # Use the remapped values for dataset.json
+        raw_map = json.loads(args.label_map_json.read_text(encoding="utf-8"))
+        label_names = {"background": 0}
+        # Invert the remap to get names for the new consecutive IDs
+        for name, old_val in raw_map.items():
+            if old_val in label_remap:
+                label_names[name] = label_remap[old_val]
     else:
         label_names = infer_named_labels(
             train_label_values, 
