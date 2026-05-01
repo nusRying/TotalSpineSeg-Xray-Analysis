@@ -342,8 +342,9 @@ def main():
         preview = ", ".join(missing_images[:10])
         print(f"Warning: Missing source images for {len(missing_images)} annotated cases. First cases: {preview}")
 
+    from tqdm import tqdm
     written = 0
-    for case_id, annotations in grouped_annotations.items():
+    for case_id, annotations in tqdm(grouped_annotations.items(), desc="Generating masks"):
         output_path = args.output_dir / f"{case_id}{args.output_file_ending}"
         if output_path.exists() and not args.overwrite:
             continue
