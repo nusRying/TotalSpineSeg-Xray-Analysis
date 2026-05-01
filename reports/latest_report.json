@@ -1,0 +1,48 @@
+{
+    "summary": {
+        "cervical_lordosis": -4.153277926290745,
+        "max_cobb": 10.960747892168484,
+        "status": "Success"
+    },
+    "metrics": {
+        "cervical_lordosis_deg": -4.153277926290745,
+        "thoracic_kyphosis_deg": 0.0,
+        "lumbar_lordosis_deg": 0.0,
+        "C2_C3_disc_ht_ant_mm": 3.984971769034255,
+        "C2_C3_disc_ht_post_mm": 3.6055512754639896,
+        "C2_C3_disc_ht_mid_mm": 3.7656340767525465,
+        "C2_C3_neutral_listhesis_mm": -0.2,
+        "C2_C3_neutral_seg_angle_deg": 2.2740887687270224,
+        "C3_C4_disc_ht_ant_mm": 4.669047011971501,
+        "C3_C4_disc_ht_post_mm": 3.2062439083762797,
+        "C3_C4_disc_ht_mid_mm": 3.9115214431215892,
+        "C3_C4_neutral_listhesis_mm": 0.2,
+        "C3_C4_neutral_seg_angle_deg": 5.4798978971645305,
+        "C4_C5_disc_ht_ant_mm": 3.8470768123342687,
+        "C4_C5_disc_ht_post_mm": 2.8284271247461903,
+        "C4_C5_disc_ht_mid_mm": 3.178049716414141,
+        "C4_C5_neutral_listhesis_mm": 0.4,
+        "C4_C5_neutral_seg_angle_deg": 4.236394799058839,
+        "C5_C6_disc_ht_ant_mm": 4.123105625617661,
+        "C5_C6_disc_ht_post_mm": 3.2,
+        "C5_C6_disc_ht_mid_mm": 3.6345563690772495,
+        "C5_C6_neutral_listhesis_mm": 0.0,
+        "C5_C6_neutral_seg_angle_deg": 4.028263666485142,
+        "C6_C7_disc_ht_ant_mm": 5.126402247190519,
+        "C6_C7_disc_ht_post_mm": 2.80713376952364,
+        "C6_C7_disc_ht_mid_mm": 3.9293765408777,
+        "C6_C7_neutral_listhesis_mm": -0.2,
+        "C6_C7_neutral_seg_angle_deg": 9.316219798344644,
+        "C2_vert_ht_loss_pct": 0,
+        "C3_vert_ht_loss_pct": 4.884545542305039,
+        "C4_vert_ht_loss_pct": 13.456330261255017,
+        "C5_vert_ht_loss_pct": 3.179990122358176,
+        "C6_vert_ht_loss_pct": 7.913084534229293,
+        "C7_vert_ht_loss_pct": 12.645797521429872,
+        "max_cobb_angle_deg": 10.960747892168484
+    },
+    "metadata": {
+        "vertebrae_count": 6,
+        "pixel_spacing": 0.2
+    }
+}
