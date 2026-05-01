@@ -187,13 +187,24 @@ def load_annotations(
         for row_number, row in enumerate(reader, start=2):
             case_id = normalize_case_id(row[case_column])
             points = []
+            valid_vertebra = True
             for x_column, y_column in zip(point_columns[::2], point_columns[1::2]):
+                x_val = row.get(x_column)
+                y_val = row.get(y_column)
+                
+                if x_val is None or y_val is None or x_val == "" or y_val == "":
+                    valid_vertebra = False
+                    break
+                    
                 try:
-                    points.append((float(row[x_column]), float(row[y_column])))
-                except ValueError as exc:
-                    raise ValueError(
-                        f"Invalid polygon coordinate in row {row_number}: {exc}"
-                    ) from exc
+                    points.append((float(x_val), float(y_val)))
+                except (ValueError, TypeError) as exc:
+                    print(f"[!] Warning: Invalid coordinate in row {row_number} for case {case_id}: {exc}. Skipping vertebra.")
+                    valid_vertebra = False
+                    break
+
+            if not valid_vertebra:
+                continue
 
             order_value = None
             if sort_column in row:
